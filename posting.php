@@ -469,6 +469,7 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
                   }
                  $ip = $_SERVER["REMOTE_ADDR"];
                  $mail_text = unbbcode($text);
+                 $original_text = unbbcode($parent["text"]);
                  $emailbody = str_replace("[recipient]", $parent["name"], $lang['email_text']);
                  $emailbody = str_replace("[name]", $name, $emailbody);
                  $emailbody = str_replace("[subject]", $subject, $emailbody);
@@ -477,7 +478,7 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
                  elseif ($settings['standard'] == "mix") $emailbody = str_replace("[posting_address]", $settings['forum_address']."mix_entry.php?id=".$neu["tid"]."#p".$neu["id"], $emailbody);
                  else $emailbody = str_replace("[posting_address]", $settings['forum_address']."forum_entry.php?id=".$neu["id"], $emailbody);
                  $emailbody = str_replace("[original_subject]", $parent["subject"], $emailbody);
-                 $emailbody = str_replace("[original_text]", $parent["text"], $emailbody);
+                 $emailbody = str_replace("[original_text]", $original_text, $emailbody);
                  $emailbody = str_replace("[forum_address]", $settings['forum_address'], $emailbody);
                  $emailbody = str_replace(htmlsc($settings['quote_symbol']), ">", $emailbody);
                  $emailbody = str_replace($settings['quote_symbol'], ">", $emailbody);
