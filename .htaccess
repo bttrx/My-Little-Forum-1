@@ -1,0 +1,20 @@
+## Enable PHP version 7.3
+##  (Sometimes useful for testing.)
+#AddHandler af_php73 .php
+
+## Load php*.ini from that directory
+##  (Sometimes useful for testing.)
+#SetEnv PHPRC /home/www/doc/6631/bttr-software.de/www/forum
+
+## Deny access to .htaccess, _htaccess, db_settings.php, INSTALL, LICENSE, or
+##  README files. After installing or updating 'my little forum' you may also
+##  want to add 'install\.php' below instead of deleting that file.
+<Files ~ "^([\._]htaccess|db_settings\.php|install\.php|INSTALL|LICENSE|README)$">
+    <IfModule mod_authz_host>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_host>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</Files>
