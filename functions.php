@@ -177,6 +177,7 @@ function bbcode($string)
   $string = preg_replace("#\[b\](.+?)\[/b\]#is", "<b>\\1</b>", $string);
   $string = preg_replace("#\[i\](.+?)\[/i\]#is", "<i>\\1</i>", $string);
   $string = preg_replace("#\[u\](.+?)\[/u\]#is", "<u>\\1</u>", $string);
+  $string = preg_replace("#\[d\](.+?)\[/d\]#is", "<del>\\1</del>", $string);
   $string = preg_replace("#\[link\]www\.(.+?)\[/link\]#is", "<a href=\"http://www.\\1\">www.\\1</a>", $string);
   $string = preg_replace_callback("#\[link\](.+?)\[/link\]#is", "shorten_link", $string);
   $string = preg_replace("#\[link=(.+?)\](.+?)\[/link\]#is", "<a href=\"\\1\">\\2</a>", $string);
@@ -222,6 +223,7 @@ function unbbcode($string)
   $string = preg_replace("#\[b\](.+?)\[/b\]#is", "*\\1*", $string);
   $string = preg_replace("#\[i\](.+?)\[/i\]#is", "\\1", $string);
   $string = preg_replace("#\[u\](.+?)\[/u\]#is", "\\1", $string);
+  $string = preg_replace("#\[d\](.+?)\[/d\]#is", "-\\1-", $string);
   $string = preg_replace("#\[link\]www\.(.+?)\[/link\]#is", "http://www.\\1", $string);
   $string = preg_replace("#\[link\](.+?)\[/link\]#is", "\\1", $string);
   $string = preg_replace("#\[link=(.+?)\](.+?)\[/link\]#is", "\\2 --> \\1", $string);
