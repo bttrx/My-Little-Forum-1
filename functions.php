@@ -235,7 +235,7 @@ function unbbcode($string)
   $string = preg_replace("#\[code\](.+?)\[/code\]#is", "\\1", $string);
   $string = preg_replace("#\[msg\](.+?)\[/msg\]#is", "\\1", $string);
   $string = preg_replace("#\[msg=(.+?)\](.+?)\[/msg\]#is", "\\2 --> \\1", $string);
-  if (isset($bbcode_img) && $settings['bbcode_img'] == 1)
+  if ($settings['bbcode_img'] == 1)
    {
     $string = preg_replace("#\[img\](.+?)\[/img\]#is", "\\1", $string);
     $string = preg_replace("#\[img\|left\](.+?)\[/img\]#is", "\\1", $string);
