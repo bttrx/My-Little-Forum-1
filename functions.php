@@ -21,6 +21,8 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA. #
 ###############################################################################
 
+require_once("function.tab2space.php");
+
 /**
  * disables magic_quotes from given variables of different types
  *
@@ -210,10 +212,19 @@ function shorten_link($string)
 
 function parse_code($string)
  {
-  if(basename($_SERVER['PHP_SELF'])=='board_entry.php' || basename($_SERVER['PHP_SELF'])=='mix_entry.php') $p_class='postingboard'; else $p_class='posting';
-  $string = $string[1];
-  $string = str_replace('<br />','',$string);
-  $string = '</p><pre><span class="code">'.$string.'</span></pre><p class="'.$p_class.'">';
+  $string = '<code>'.$string[1].'</code>';
+
+  // Replace tabs with correct # of spaces.
+  $string = tab2space($string, 8);
+
+  // Replace two spaces with "&nbsp; " so non-tabbed code indents without making huge long lines.
+  $string = str_replace("  ", "&nbsp; ", $string);
+  // Replace two spaces with " &nbsp;" to catch odd #s of spaces.
+  $string = str_replace("  ", " &nbsp;", $string);
+
+  // Replace space occurring at the beginning of a line.
+  $string = preg_replace("/^ {1}/m", '&nbsp;', $string);
+
   return $string;
  }
 
