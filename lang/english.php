@@ -156,6 +156,8 @@ $lang['bbcode_bold'] =                 "bold";
 $lang['bbcode_bold_title'] =           "Format text in bold: [b]Text[/b]";
 $lang['bbcode_italic'] =               "italic";
 $lang['bbcode_italic_title'] =         "Format text in italic: [i]Text[/i]";
+$lang['bbcode_code'] =                 "code";
+$lang['bbcode_code_title'] =           "Format text as code: [code]Text[/code]";
 $lang['bbcode_link'] =                 "link";
 $lang['bbcode_link_title'] =           "Insert hyperlink: [link=http://www.domain.tld/]link text[/link] or [link]http://www.domain.tld/[/link]";
 $lang['bbcode_link_linktext'] =        "Link text (optional):";
