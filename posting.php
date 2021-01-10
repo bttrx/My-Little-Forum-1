@@ -918,7 +918,7 @@ switch ($show)
        ?><input class="bbcode-button" style="font-weight: bold;" type="button" name="bold" value="<?php echo $lang['bbcode_bold']; ?>" title="<?php echo $lang['bbcode_bold_title']; ?>" onclick="bbcode('b');" /><br />
        <input class="bbcode-button" style="font-style: italic;" type="button" name="italic" value="<?php echo $lang['bbcode_italic']; ?>" title="<?php echo $lang['bbcode_italic_title']; ?>" onclick="bbcode('i');" /><br />
        <input class="bbcode-button" style="text-decoration: line-through;" type="button" name="strikethrough" value="<?php echo $lang['bbcode_strikethrough']; ?>" title="<?php echo $lang['bbcode_strikethrough_title']; ?>" onclick="bbcode('s');" /><br />
-       <input class="bbcode-button" style="font-family: Courier New, Courier, monospace;" type="button" name="code" value="<?php echo $lang['bbcode_code']; ?>" title="<?php echo $lang['bbcode_code_title']; ?>" onclick="bbcode('code');" /><br />
+       <input class="bbcode-button" style="font-family: 'Courier New', Courier, monospace;" type="button" name="code" value="<?php echo $lang['bbcode_code']; ?>" title="<?php echo $lang['bbcode_code_title']; ?>" onclick="bbcode('code');" /><br />
        <input class="bbcode-button" style="color: #0000ff; text-decoration: underline;" type="button" name="link2" value="<?php echo $lang['bbcode_link']; ?>" title="<?php echo $lang['bbcode_link_title']; ?>" onclick="insert_link('entryform','text','<?php echo $lang['bbcode_link_linktext']; ?>','<?php echo $lang['bbcode_link_url']; ?>');" /><br />
        <?php if ($settings['bbcode_img']==1)
         {
