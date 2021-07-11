@@ -233,7 +233,7 @@ $lang['pwf_activating_email_txt'] =    "Hi [name],\nthis e-mail has been sent fr
 $lang['new_pw_email_sj'] =             "New user data for the forum";
 $lang['new_pw_email_txt'] =            "Hi [name],\nhere is your new user data:\n\nUsername: [name]\nPassword: [password]\n\nClick here to log in directly:\n[login_link]\n\nIn the user area the user data and the password can be changed.";
 $lang['new_pw_ok'] =                   "A new password has been generated and sent.";
-$lang['new_pw_failed'] =               "The confirmation link is invalid. A new password could't be generated.";
+$lang['new_pw_failed'] =               "The confirmation link is invalid. A new password couldn't be generated.";
 $lang['login_advice'] =                "In order to log in, cookies have to be activated!";
 $lang['auto_login_marking'] =          "Log me in automatically on this computer";
 
