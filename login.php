@@ -181,7 +181,7 @@ switch ($action)
     if($field["user_email"] == $pwf_email)
      {
       $pwf_code = md5(uniqid(rand()));
-      $update_result = mysqli_query($connid, "UPDATE ". $db_settings['userdata_table'] ." SET last_login=last_login, registered=registered, pwf_code='". mysqli_real_escape_string($connid, $pwf_code) ."' WHERE user_id=". intval($field["user_id"]) ."' LIMIT 1");
+      $update_result = mysqli_query($connid, "UPDATE ". $db_settings['userdata_table'] ." SET last_login=last_login, registered=registered, pwf_code='". mysqli_real_escape_string($connid, $pwf_code) ."' WHERE user_id=". intval($field["user_id"]) ." LIMIT 1");
 
       // send mail with activating link:
       $ip = $_SERVER["REMOTE_ADDR"];
