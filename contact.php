@@ -115,6 +115,18 @@ if (isset($id) || isset($uid) || isset($forum_contact))
     if ($sender_email != "" and !preg_match("/^[^@]+@.+\.\D{2,5}$/", $sender_email)) $errors[] = $lang['error_email_wrong'];
     if ($text == "") $errors[] = $lang['error_no_text'];
 
+    // check name length
+    if (strlen($sender_name) > $settings['name_maxlength'])
+        $errors[] = $lang['name_marking_msg']." ".$lang['error_input_too_long'];
+
+    // check name chars
+    if ($sender_name != "" and !preg_match("/^[A-Za-z0-9 '\-\.]+$/", $sender_name))
+        $errors[] = $lang['name_marking_msg']." ".$lang['valid_chars_in_name'];
+
+    // check for two or more consecutive single quote, minus, or dot chars
+    if ($sender_name != "" and preg_match("/'{2,}|\-{2,}|\.{2,}/", $sender_name))
+        $errors[] = $lang['name_marking_msg']." ".$lang['invalid_char_combination'];
+
      // check for not accepted words:
      $result=mysqli_query($connid, "SELECT list FROM ". $db_settings['banlists_table'] ." WHERE name = 'words' LIMIT 1");
      if(!$result) die($lang['db_error']);

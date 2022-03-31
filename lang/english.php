@@ -378,6 +378,8 @@ $lang['err_mail_not_accepted_word'] =  "The message contains at least one not ac
 $lang['email_no_subject'] =            "No subject";
 $lang['conf_sj'] =                     "Notification about sent e-mail";
 $lang['conf_email_txt'] =              "The following message has been sent via the forum ([forum_address]) by [sender_name] to [recipient_name] with the subject \"[subject]\":";
+$lang['valid_chars_in_name'] =         "Only a-z, A-Z, 0-9, space, single quote, '-', or '.' allowed";
+$lang['invalid_char_combination'] =    "Invalid combination of characters";
 
 //rss.php:
 $lang['rss_time'] =                    "%a, %d %b %Y %H:%M:%S GMT";
