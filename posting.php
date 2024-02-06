@@ -460,13 +460,15 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
                  // wenn das Posting von einem registrierten User stammt, E-Mail-Adresse aus den User-Daten holen:
                  if ($parent["user_id"] > 0)
                   {
-                   $email_result = mysqli_query($connid, "SELECT user_name, user_email FROM ". $db_settings['userdata_table'] ." WHERE user_id = ". intval($parent["user_id"]) ." LIMIT 1");
+                   $email_result = mysqli_query($connid, "SELECT user_name, user_email, user_view FROM ". $db_settings['userdata_table'] ." WHERE user_id = ". intval($parent["user_id"]) ." LIMIT 1");
                    if (!$email_result) die($lang['db_error']);
                    $field = mysqli_fetch_assoc($email_result);
                    mysqli_free_result($email_result);
                    $parent["name"] = $field["user_name"];
                    $parent["email"] = $field["user_email"];
+                   $parent["user_view"] = $field["user_view"];
                   }
+                 else $parent["user_view"] = $settings['standard'];
                  $ip = $_SERVER["REMOTE_ADDR"];
                  $mail_text = unbbcode($text);
                  $original_text = unbbcode($parent["text"]);
@@ -474,8 +476,8 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
                  $emailbody = str_replace("[name]", $name, $emailbody);
                  $emailbody = str_replace("[subject]", $subject, $emailbody);
                  $emailbody = str_replace("[text]", $mail_text, $emailbody);
-                 if ($settings['standard'] == "board") $emailbody = str_replace("[posting_address]", $settings['forum_address']."board_entry.php?id=".$neu["tid"]."#p".$neu["id"], $emailbody);
-                 elseif ($settings['standard'] == "mix") $emailbody = str_replace("[posting_address]", $settings['forum_address']."mix_entry.php?id=".$neu["tid"]."#p".$neu["id"], $emailbody);
+                 if ($parent["user_view"] == "board") $emailbody = str_replace("[posting_address]", $settings['forum_address']."board_entry.php?id=".$neu["tid"]."#p".$neu["id"], $emailbody);
+                 elseif ($parent["user_view"] == "mix") $emailbody = str_replace("[posting_address]", $settings['forum_address']."mix_entry.php?id=".$neu["tid"]."#p".$neu["id"], $emailbody);
                  else $emailbody = str_replace("[posting_address]", $settings['forum_address']."forum_entry.php?id=".$neu["id"], $emailbody);
                  $emailbody = str_replace("[original_subject]", $parent["subject"], $emailbody);
                  $emailbody = str_replace("[original_text]", $original_text, $emailbody);
