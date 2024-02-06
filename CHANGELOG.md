@@ -8,8 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- Use user's default view setting to generate forum link in notification mails.
-  (Before, the global default view setting was used.)
+- Notification mails:
+  - Replaced global default view setting with user's default view setting in forum link generation.
+  - 'From:' field format changed from 'Forum name' to 'Sender via Forum name'.
 - Update copyright year in `README`.
 
 ## 2022-03-31

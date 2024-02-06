@@ -484,7 +484,7 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
                  $emailbody = str_replace("[forum_address]", $settings['forum_address'], $emailbody);
                  $emailbody = str_replace(htmlsc($settings['quote_symbol']), ">", $emailbody);
                  $emailbody = str_replace($settings['quote_symbol'], ">", $emailbody);
-                 $header  = "From: ".$settings['forum_name']." <".$settings['forum_email'].">\n";
+                 $header  = "From: $name via ".$settings['forum_name']." <".$settings['forum_email'].">\n";
                  //$header .= "Reply-To: $name <$absender>\n";
                  //$header .= "Reply-To: <".$forum_email.">\n";
                  $header .= "X-Mailer: Php/" . phpversion(). "\n";
@@ -510,7 +510,7 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
                $emailbody = str_replace("[text]", $mail_text, $emailbody);
                $emailbody = str_replace(htmlsc($settings['quote_symbol']), ">", $emailbody);
                $emailbody = str_replace($settings['quote_symbol'], ">", $emailbody);
-               $header = "From: ".$settings['forum_name']." <".$settings['forum_email'].">\n";
+               $header = "From: $name via ".$settings['forum_name']." <".$settings['forum_email'].">\n";
                $header .= "X-Mailer: Php/" . phpversion(). "\n";
                $header .= "X-Sender-ip: $ip\n";
                $header .= "Content-Type: text/plain";
