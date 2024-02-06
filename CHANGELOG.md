@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - Use user's default view setting to generate forum link in notification mails.
+  (Before, the global default view setting was used.)
 - Update copyright year in `README`.
 
 ## 2022-03-31
