@@ -506,10 +506,6 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
                if ($id > 0) $emailbody = str_replace("[name]", $name, $lang['admin_email_text_reply']); else $emailbody = str_replace("[name]", $name, $lang['admin_email_text']);
                $emailbody = str_replace("[subject]", $subject, $emailbody);
                $emailbody = str_replace("[text]", $mail_text, $emailbody);
-               if ($settings['standard'] == "board") $emailbody = str_replace("[posting_address]", $settings['forum_address']."board_entry.php?id=".$neu["tid"]."#p".$neu["id"], $emailbody);
-               elseif ($settings['standard'] == "mix") $emailbody = str_replace("[posting_address]", $settings['forum_address']."mix_entry.php?id=".$neu["tid"]."#p".$neu["id"], $emailbody);
-               else $emailbody = str_replace("[posting_address]", $settings['forum_address']."forum_entry.php?id=".$neu["id"], $emailbody);
-               $emailbody = str_replace("[forum_address]", $settings['forum_address'], $emailbody);
                $emailbody = str_replace(htmlsc($settings['quote_symbol']), ">", $emailbody);
                $emailbody = str_replace($settings['quote_symbol'], ">", $emailbody);
                $header = "From: ".$settings['forum_name']." <".$settings['forum_email'].">\n";
@@ -517,11 +513,15 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
                $header .= "X-Sender-ip: $ip\n";
                $header .= "Content-Type: text/plain";
                // Schauen, wer eine E-Mail-Benachrichtigung will:
-               $en_result=mysqli_query($connid, "SELECT user_name, user_email FROM ". $db_settings['userdata_table'] ." WHERE new_posting_notify=1");
+               $en_result=mysqli_query($connid, "SELECT user_name, user_email, user_view FROM ". $db_settings['userdata_table'] ." WHERE new_posting_notify=1");
                if(!$en_result) die($lang['db_error']);
                while ($admin_array = mysqli_fetch_assoc($en_result))
                {
-                $ind_emailbody = str_replace("[admin]", $admin_array['user_name'], $emailbody);
+                if ($admin_array['user_view'] == "board") $ind_emailbody = str_replace("[posting_address]", $settings['forum_address']."board_entry.php?id=".$neu["tid"]."#p".$neu["id"], $emailbody);
+                elseif ($admin_array['user_view'] == "mix") $ind_emailbody = str_replace("[posting_address]", $settings['forum_address']."mix_entry.php?id=".$neu["tid"]."#p".$neu["id"], $emailbody);
+                else $ind_emailbody = str_replace("[posting_address]", $settings['forum_address']."forum_entry.php?id=".$neu["id"], $emailbody);
+                $ind_emailbody = str_replace("[forum_address]", $settings['forum_address'], $ind_emailbody);
+                $ind_emailbody = str_replace("[admin]", $admin_array['user_name'], $ind_emailbody);
                 $an = $admin_array['user_name']." <".$admin_array['user_email'].">";
                 if($settings['mail_parameter']!='')
                  {
