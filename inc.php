@@ -137,19 +137,23 @@ else { $thread_count = 0; $posting_count = 0; }
 $count_result = mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['userdata_table']);
 list($user_count) = mysqli_fetch_row($count_result);
 
-if ($settings['count_users_online'] == 1)
+if ($settings['count_users_online'] > 0)
  {
   user_online();
   $count_result = mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['useronline_table'] ." WHERE user_id > 0");
   list($useronline_count) = mysqli_fetch_row($count_result);
-  $count_result = mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['useronline_table'] ." WHERE user_id = 0");
-  list($guestsonline_count) = mysqli_fetch_row($count_result);
-  $counter = str_replace("[postings]", $posting_count, $lang['counter_uo']);
+  if ($settings['count_users_online'] != 2) {
+   $count_result = mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['useronline_table'] ." WHERE user_id = 0");
+   list($guestsonline_count) = mysqli_fetch_row($count_result);
+  }
+  if ($settings['count_users_online'] != 2) $counter = $lang['counter_uo'];
+  else $counter = $lang['counter_uo_ng'];
+  $counter = str_replace("[postings]", $posting_count, $counter);
   $counter = str_replace("[threads]", $thread_count, $counter);
   $counter = str_replace("[users]", $user_count, $counter);
-  $counter = str_replace("[total_online]", $useronline_count+$guestsonline_count, $counter);
+  if ($settings['count_users_online'] != 2) $counter = str_replace("[total_online]", $useronline_count+$guestsonline_count, $counter);
   $counter = str_replace("[user_online]", $useronline_count, $counter);
-  $counter = str_replace("[guests_online]", $guestsonline_count, $counter);
+  if ($settings['count_users_online'] != 2) $counter = str_replace("[guests_online]", $guestsonline_count, $counter);
  }
 else
  {

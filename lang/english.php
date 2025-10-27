@@ -4,7 +4,7 @@
 // "\n" stands for line feed in some strings
 
 $lang['language'] =                    "en";
-$lang['charset'] =                     "ISO-8859-1";
+$lang['charset'] =                     "utf-8";
 $lang['additional_language_file'] =    "english_add.php";
 $lang['locale'] =                      array("en", "en_EN@euro", "eng");
 $lang['time_format'] =                 "%d.%m.%Y, %H:%M";
@@ -43,6 +43,7 @@ $lang['search_or'] =                   "or";
 $lang['search_phrase'] =               "Phrase";
 $lang['counter'] =                     "[postings] Postings in [threads] Threads, [users] registered users";
 $lang['counter_uo'] =                  "[postings] Postings in [threads] Threads, [users] registered users, [total_online] users online ([user_online] registered, [guests_online] guests)";
+$lang['counter_uo_ng'] =               "[postings] Postings in [threads] Threads, [users] registered users ([user_online] online)";
 $lang['contact_linkname'] =            "Admin contact";
 $lang['top_linktitle'] =               "Back to top of page";
 $lang['new_entry_linkname'] =          "New entry";
@@ -382,7 +383,7 @@ $lang['valid_chars_in_name'] =         "Only a-z, A-Z, 0-9, space, single quote,
 $lang['invalid_char_combination'] =    "Invalid combination of characters";
 
 //rss.php:
-$lang['rss_time'] =                    "%a, %d %b %Y %H:%M:%S GMT";
+$lang['rss_time'] =                    "%a, %d %b %Y %H:%M:%S %z";
 $lang['rss_posting_by'] =              "Post by [name], [time]:";
 $lang['rss_reply_by'] =                "Reply from [name], [time]:";
 

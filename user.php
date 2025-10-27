@@ -524,7 +524,7 @@ switch ($action)
    if (!$result) die($lang['db_error']);
 
    // Schauen, wer online ist:
-   if ($settings['count_users_online'] == 1)
+   if ($settings['count_users_online'] > 0)
     {
      $useronline_result = mysqli_query($connid, "SELECT user_id FROM ". $db_settings['useronline_table']);
      if (!$useronline_result) die($lang['db_error']);
@@ -543,7 +543,7 @@ switch ($action)
       <th><a href="user.php?action=show+users&amp;order=user_type&amp;descasc=<?php if ($descasc=="ASC" && $order=="user_type") echo "DESC"; else echo "ASC"; ?>&amp;ul=<?php echo $ul; ?>" title="<?php echo $lang['order_linktitle']; ?>"><?php echo $lang['userlist_type']; ?></a><?php if ($order=="user_type" && $descasc=="ASC") { ?>&nbsp;<img src="img/asc.gif" alt="[asc]" width="5" height="9" border="0"><?php } elseif ($order=="user_type" && $descasc=="DESC") { ?>&nbsp;<img src="img/desc.gif" alt="[desc]" width="5" height="9" border="0"><?php } ?></th>
       <th><?php echo $lang['userlist_email']; ?></th>
       <th><?php echo $lang['userlist_hp']; ?></th>
-      <?php if ($settings['count_users_online'] == 1) { ?><th><?php echo $lang['userlist_online']; ?></th><?php }
+      <?php if ($settings['count_users_online'] > 0) { ?><th><?php echo $lang['userlist_online']; ?></th><?php }
       if (isset($_SESSION[$settings['session_prefix'].'user_type']) && ($_SESSION[$settings['session_prefix'].'user_type'] == "admin" || $_SESSION[$settings['session_prefix'].'user_type'] == "mod")) { ?><th><?php echo $lang['lock']; ?></th> <?php } ?>
       </tr>
       <?php
@@ -555,7 +555,7 @@ switch ($action)
         <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><span class="small"><?php if ($field["user_type"] == "admin") echo $lang['ud_admin']; elseif ($field["user_type"] == "mod") echo $lang['ud_mod']; else echo $lang['ud_user']; ?></span></td>
         <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><span class="small"><?php if ($field["hide_email"]!=1) { ?><a href="contact.php?uid=<?php echo $field['user_id']; ?>"><img src="img/email.gif" alt="'<?php echo $lang['email_alt']; ?>" title="<?php echo str_replace("[name]", htmlsc($field["user_name"]), $lang['email_to_user_linktitle']); ?>" width="13" height="10" /></a><?php } else echo "&nbsp;"; ?></span></td>
         <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><span class="small"><?php if ($field["user_hp"]!="") { if (substr($field["user_hp"],0,7) != "http://" && substr($field["user_hp"],0,8) != "https://" && substr($field["user_hp"],0,6) != "ftp://" && substr($field["user_hp"],0,9) != "gopher://" && substr($field["user_hp"],0,7) != "news://") $field["user_hp"] = "http://".$field["user_hp"]; ?><a href="<?php echo htmlsc($field["user_hp"]); ?>"><img src="img/homepage.gif" alt="<?php echo $lang['homepage_alt']; ?>" title="<?php echo htmlsc($field["user_hp"]); ?>" width="13" height="13" /></a><?php } else echo "&nbsp;" ?></span></td>
-        <?php if ($settings['count_users_online'] == 1) { ?><td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><span class="online"><?php if ($settings['count_users_online'] == 1 && in_array($field['user_id'], $useronline_array)) { echo $lang['online']; } else echo "&nbsp;"; ?></span></td><?php }
+        <?php if ($settings['count_users_online'] > 0) { ?><td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><span class="online"><?php if ($settings['count_users_online'] > 0 && in_array($field['user_id'], $useronline_array)) { echo $lang['online']; } else echo "&nbsp;"; ?></span></td><?php }
         if (isset($_SESSION[$settings['session_prefix'].'user_type']) && ($_SESSION[$settings['session_prefix'].'user_type'] == "admin" || $_SESSION[$settings['session_prefix'].'user_type'] == "mod")) { ?><td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><?php if ($field["user_type"]=="user") { if ($field["user_lock"] == 0) { ?><span class="small"><a href="user.php?user_lock=<?php echo $field["user_id"]; ?>&amp;order=<?php echo $order; ?>&amp;descasc=<?php echo $descasc; ?>&amp;page=<?php echo $page; ?>" title="<?php echo str_replace("[name]", htmlsc($field["user_name"]), $lang['lock_user_lt']); ?>"><?php echo $lang['unlocked']; ?></a></span><?php } else { ?><span class="small"><a style="color: red;" href="user.php?user_lock=<?php echo $field["user_id"]; ?>&amp;order=<?php echo $order; ?>&amp;descasc=<?php echo $descasc; ?>&amp;page=<?php echo $page; ?>" title="<?php echo str_replace("[name]", htmlsc($field["user_name"]), $lang['unlock_user_lt']); ?>"><?php echo $lang['locked']; ?></a></span><?php } } else echo "&nbsp;"; ?></td><?php } ?>
         </tr>
         <?php $i++;

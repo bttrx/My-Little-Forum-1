@@ -1512,7 +1512,7 @@ switch ($action)
     </tr>
     <tr>
      <td class="c"><b><?php echo $lang_add['count_users_online']; ?></b><br /><span class="small"><?php echo $lang_add['count_users_online_d']; ?></span></td>
-     <td class="d"><input type="radio" name="count_users_online" value="1"<?php if ($settings['count_users_online']==1) echo ' checked="checked"'; ?> /><?php echo $lang['yes']; ?>&nbsp;<input type="radio" name="count_users_online" value="0"<?php if ($settings['count_users_online']==0) echo ' checked="checked"'; ?> /><?php echo $lang['no']; ?></td>
+     <td class="d"><input type="radio" name="count_users_online" value="1"<?php if ($settings['count_users_online']==1) echo ' checked="checked"'; ?> /><?php echo $lang_add['count_all_users']; ?>&nbsp;<input type="radio" name="count_users_online" value="2"<?php if ($settings['count_users_online']==2) echo ' checked="checked"'; ?> /><?php echo $lang_add['count_only_reg_users']; ?>&nbsp;<input type="radio" name="count_users_online" value="0"<?php if ($settings['count_users_online']==0) echo ' checked="checked"'; ?> /><?php echo $lang['no']; ?></td>
     </tr>
     <tr>
      <td class="c"><b><?php echo $lang_add['rss_feed']; ?></b><br /><span class="small"><?php echo $lang_add['rss_feed_d']; ?></span></td>
