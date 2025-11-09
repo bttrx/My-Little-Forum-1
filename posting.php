@@ -959,16 +959,16 @@ switch ($show)
    </tr>
    <?php if ((isset($_SESSION[$settings['session_prefix'].'user_id']) && $action=="new") || (isset($_SESSION[$settings['session_prefix'].'user_id']) && $action=="edit" && $p_user_id > 0)) { ?>
    <tr>
-    <td colspan="2"><input type="checkbox" name="show_signature" value="1"<?php if (isset($show_signature) && $show_signature==1) { echo "checked=\"checked\""; } ?> />&nbsp;<?php echo $lang['show_signature_cbm']; ?></td>
+    <td colspan="2"><input type="checkbox" name="show_signature" value="1"<?php if (isset($show_signature) && $show_signature==1) { echo " checked=\"checked\""; } ?> />&nbsp;<?php echo $lang['show_signature_cbm']; ?></td>
    </tr>
    <?php } ?>
    <?php if ($settings['email_notification'] == 1) { ?>
    <tr>
-    <td colspan="2"><input type="checkbox" name="email_notify" value="1"<?php if (isset($email_notify) && $email_notify==1) { echo "checked=\"checked\""; } ?> />&nbsp;<?php echo $lang['email_notification_cbm']; ?></td>
+    <td colspan="2"><input type="checkbox" name="email_notify" value="1"<?php if (isset($email_notify) && $email_notify==1) { echo " checked=\"checked\""; } ?> />&nbsp;<?php echo $lang['email_notification_cbm']; ?></td>
    </tr><?php } else { ?><input type="hidden" name="email_b" value="" /><?php } ?>
    <?php if (isset($_SESSION[$settings['session_prefix'].'user_type']) && ($_SESSION[$settings['session_prefix'].'user_type'] == "admin" || $_SESSION[$settings['session_prefix'].'user_type'] == "mod") && (empty($id) || $id == 0 || $action=="edit" && isset($pid) && $pid == 0)) { ?>
    <tr>
-    <td colspan="2"><input type="checkbox" name="fixed" value="1"<?php if (isset($fixed) && $fixed==1) { echo "checked=\"checked\""; } ?> />&nbsp;<?php echo $lang['fix_thread']; ?></td>
+    <td colspan="2"><input type="checkbox" name="fixed" value="1"<?php if (isset($fixed) && $fixed==1) { echo " checked=\"checked\""; } ?> />&nbsp;<?php echo $lang['fix_thread']; ?></td>
    </tr><?php } ?>
    <tr>
     <td>&nbsp;</td><td>&nbsp;</td>
