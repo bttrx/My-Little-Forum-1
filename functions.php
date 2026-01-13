@@ -213,20 +213,21 @@ function shorten_link($string)
  }
 
 function parse_code($string)
- {
-  // Replace tabs with correct # of spaces.
-  $string = tab2space($string[1], 8);
+{
+    // Replace tabs with correct number of spaces.
+    $string = tab2space($string[1], 8);
 
-  // Replace two spaces with "&nbsp; " so non-tabbed code indents without making huge long lines.
-  $string = str_replace("  ", "&nbsp; ", $string);
-  // Replace two spaces with " &nbsp;" to catch odd #s of spaces.
-  $string = str_replace("  ", " &nbsp;", $string);
+    // Replace two spaces with '&nbsp; ' so non-tabbed code indents without making huge long lines.
+    $string = str_replace('  ', '&nbsp; ', $string);
 
-  // Replace space occurring at the beginning of a line.
-  $string = preg_replace("/^ {1}/m", '&nbsp;', $string);
+    // Replace two spaces with ' &nbsp;' to catch odd numbers of spaces.
+    $string = str_replace('  ', ' &nbsp;', $string);
 
-  return '<code>'.$string.'</code>';
- }
+    // Replace space occurring at the beginning of a line.
+    $string = preg_replace('/^ {1}/m', '&nbsp;', $string);
+
+    return '<code>'.$string.'</code>';
+}
 
 // strips BBCodes for e-mail texts:
 function unbbcode($string)
