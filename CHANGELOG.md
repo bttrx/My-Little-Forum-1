@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 2026-01-13
+
+### Fixed
+
+- `[code]`+tab char was expanded to two spaces only.
+
 ## 2025-11-12
 
 ### Changed
