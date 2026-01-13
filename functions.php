@@ -214,10 +214,8 @@ function shorten_link($string)
 
 function parse_code($string)
  {
-  $string = '<code>'.$string[1].'</code>';
-
   // Replace tabs with correct # of spaces.
-  $string = tab2space($string, 8);
+  $string = tab2space($string[1], 8);
 
   // Replace two spaces with "&nbsp; " so non-tabbed code indents without making huge long lines.
   $string = str_replace("  ", "&nbsp; ", $string);
@@ -227,7 +225,7 @@ function parse_code($string)
   // Replace space occurring at the beginning of a line.
   $string = preg_replace("/^ {1}/m", '&nbsp;', $string);
 
-  return $string;
+  return '<code>'.$string.'</code>';
  }
 
 // strips BBCodes for e-mail texts:
