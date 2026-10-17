@@ -202,7 +202,7 @@ if(isset($_POST['sql_submit']))
   if ($_POST['sql_pw']=='') $errors[] = $lang['error_form_uncompl'];
   else
    {
-    if ($field['user_pw'] != md5(trim($_POST['sql_pw']))) $errors[] = $lang['pw_wrong'];
+    if (!forum_password_verify(trim($_POST['sql_pw']), $field['user_pw'])) $errors[] = $lang['pw_wrong'];
    }
 
   if(empty($errors))
@@ -229,8 +229,13 @@ if (isset($_GET['mark']))
   mysqli_free_result($mark_result);
   if ($field['marked']==0) $marked = 1; else $marked = 0;
   mysqli_query($connid, "UPDATE ". $db_settings['forum_table'] ." SET time=time, last_answer=last_answer, edited=edited, marked= ". intval($marked) ." WHERE tid= ". intval($_GET['mark']));
-  header("location: ".$_GET['refer']."?id=".$_GET['mark']."&category=".$_GET['category']."&page=".$_GET['page']."&order=".$_GET['order']);
-  die("<a href=\"".$_GET['refer']."?id=".$_GET['mark']."&amp;category=".$_GET['category']."&amp;page=".$_GET['page']."&amp;order=".$_GET['order']."\">further...</a>");
+  $safe_refer = forum_safe_return_page(isset($_GET['refer']) ? $_GET['refer'] : 'index.php');
+  if (!in_array($safe_refer, array('board.php', 'forum.php', 'mix.php', 'board_entry.php', 'forum_entry.php', 'mix_entry.php'), true)) $safe_refer = 'index.php';
+  $safe_order = (isset($_GET['order']) && preg_match('/\A(subject|category|name|time|last_answer)\z/', (string)$_GET['order'])) ? $_GET['order'] : 'time';
+  $safe_params = array('id' => intval($_GET['mark']), 'category' => intval(isset($_GET['category']) ? $_GET['category'] : 0), 'page' => max(0, intval(isset($_GET['page']) ? $_GET['page'] : 0)), 'order' => $safe_order);
+  $safe_url = $safe_refer.'?'.http_build_query($safe_params, '', '&', PHP_QUERY_RFC3986);
+  header('Location: '.$safe_url);
+  exit;
 
  }
 
@@ -601,7 +606,7 @@ if (isset($_POST['delete_all_postings_confirmed']))
   if ($_POST['delete_all_postings_confirm_pw']=="") $errors[] = $lang['error_form_uncompl'];
   else
    {
-    if ($field['user_pw'] != md5(trim($_POST['delete_all_postings_confirm_pw']))) $errors[] = $lang['pw_wrong'];
+    if (!forum_password_verify(trim($_POST['delete_all_postings_confirm_pw']), $field['user_pw'])) $errors[] = $lang['pw_wrong'];
    }
   if (empty($errors))
    {
@@ -621,7 +626,7 @@ if (isset($_POST['delete_db_confirmed']))
   if ($_POST['delete_db_confirm_pw']=="" || empty($_POST['delete_modus'])) $errors[] = $lang['error_form_uncompl'];
   else
    {
-    if ($field['user_pw'] != md5(trim($_POST['delete_db_confirm_pw']))) $errors[] = $lang['pw_wrong'];
+    if (!forum_password_verify(trim($_POST['delete_db_confirm_pw']), $field['user_pw'])) $errors[] = $lang['pw_wrong'];
    }
   if (empty($errors))
    {
@@ -743,7 +748,7 @@ if (isset($_POST['unlock_marked_threads_submitted']))
   if(empty($_POST['captcha_contact'])) $_POST['captcha_contact'] = 0;
   if(empty($_POST['captcha_register'])) $_POST['captcha_register'] = 0;
 
-  while(list($key, $val) = each($_POST))
+  foreach ($_POST as $key => $val)
    {
     if($key != "settings_submitted") mysqli_query($connid, "UPDATE ". $db_settings['settings_table'] ." SET value='". mysqli_real_escape_string($connid, $val) ."' WHERE name='". mysqli_real_escape_string($connid, $key) ."' LIMIT 1");
    }
@@ -810,7 +815,7 @@ if (isset($_POST['ar_username']))
       $ar_pw="";
       for($i=0;$i<8;$i++) { $ar_pw.=substr($letters,mt_rand(0,strlen($letters)-1),1); }
      }
-    $encoded_ar_pw = md5($ar_pw);
+    $encoded_ar_pw = forum_password_hash($ar_pw);
     $new_user_result = mysqli_query($connid, "INSERT INTO ". $db_settings['userdata_table'] ." (user_type, user_name, user_pw, user_email, hide_email, profile, last_login, last_logout, user_ip, registered, user_view, personal_messages) VALUES ('user','". mysqli_real_escape_string($connid, $ar_username) ."','". mysqli_real_escape_string($connid, $encoded_ar_pw) ."','". mysqli_real_escape_string($connid, $ar_email) ."','1','',NOW(),NOW(),'". mysqli_real_escape_string($connid, $_SERVER["REMOTE_ADDR"]) ."',NOW(),'". mysqli_real_escape_string($connid, $settings['standard']) ."',1)");
     if(!$new_user_result) die($lang['db_error']);
 
@@ -1155,7 +1160,7 @@ switch ($action)
     $cat_select = '<select class="kat" size="1" name="move_category">';
     if ($categories!=false)
      {
-      while(list($key, $val) = each($categories))
+      foreach ($categories as $key => $val)
        {
         if($key!=0) $cat_select .= '<option value="'.$key.'">'.$val.'</option>';
        }
@@ -1233,13 +1238,15 @@ switch ($action)
   break;
   case "user":
    if (isset($_GET['order'])) $order = $_GET['order']; else $order="user_id";
+   $order = forum_safe_sort_column($order, array('user_id', 'user_name', 'user_email', 'user_type', 'registered', 'logins', 'last_login', 'user_lock'), 'user_id');
    if (isset($_GET['sam'])) $sam = (int)$_GET['sam']; else $sam = 50;
    if (isset($_GET['descasc'])) $descasc = $_GET['descasc']; else $descasc = "ASC";
-   if (isset($_GET['page'])) $page = $_GET['page']; else $page = 0;
+   $descasc = forum_safe_sort_direction($descasc, 'ASC');
+   if (isset($_GET['page'])) $page = max(0, intval($_GET['page'])); else $page = 0;
    if (empty($category)) $category="all";
 
-   if(isset($_GET['search_user'])) $search_user = $_GET['search_user'];
-   if(isset($_GET['letter'])) $letter = $_GET['letter'];
+   if(isset($_GET['search_user']) && is_string($_GET['search_user'])) $search_user = $_GET['search_user'];
+   if(isset($_GET['letter']) && is_string($_GET['letter'])) $letter = $_GET['letter'];
 
    $ul = $page * $settings['users_per_page'];
 
@@ -1263,7 +1270,7 @@ switch ($action)
    list($user_count) = mysqli_fetch_row($user_count_result);
    mysqli_free_result($user_count_result);
 
-   if (isset($_GET['letter']) && $_GET['letter']!="") $su_result = mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['userdata_table'] ." WHERE user_name LIKE '". mysqli_real_escape_string($connid, $_GET['letter']) ."%'");
+   if (isset($letter) && $letter!="") $su_result = mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['userdata_table'] ." WHERE user_name LIKE '". mysqli_real_escape_string($connid, $letter) ."%'");
    else $su_result = mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['userdata_table']);
    list($sel_user_count) = mysqli_fetch_row($su_result);
    mysqli_free_result($su_result);
@@ -1343,11 +1350,11 @@ switch ($action)
    <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>" width="10px"><input type="checkbox" name="selected[]" value="<?php echo $zeile["user_id"]; ?>" /></td>
    <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>" width="10px"><?php echo $zeile["user_id"]; ?></td>
    <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><a href="user.php?id=<?php echo $zeile["user_id"]; ?>" title="<?php echo str_replace("[name]", htmlsc($zeile["user_name"]), $lang['show_userdata_linktitle']); ?>"><b><?php echo htmlsc($zeile["user_name"]); ?></b></a></td>
-   <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><a href="mailto:<?php echo $zeile["user_email"]; ?>" title="<?php echo str_replace("[name]", htmlsc($zeile["user_name"]), $lang_add['mailto_user_lt']); ?>"><?php echo htmlsc($zeile["user_email"]); ?></a></td>
+   <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><a href="mailto:<?php echo htmlsc($zeile["user_email"]); ?>" title="<?php echo str_replace("[name]", htmlsc($zeile["user_name"]), $lang_add['mailto_user_lt']); ?>"><?php echo htmlsc($zeile["user_email"]); ?></a></td>
    <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><?php if ($zeile["user_type"] == "admin") echo $lang['ud_admin']; elseif ($zeile["user_type"] == "mod") echo $lang['ud_mod']; else echo $lang['ud_user']; ?></td>
-   <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><?php echo strftime($lang['time_format'],$zeile["registered_time"]); ?></td>
+   <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><?php echo forum_strftime($lang['time_format'],$zeile["registered_time"]); ?></td>
    <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><?php echo $zeile["logins"]; ?></td>
-   <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><?php if ($zeile["logins"] > 0) echo strftime($lang['time_format'],$zeile["last_login_time"]); else echo "&nbsp;"; ?></td>
+   <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><?php if ($zeile["logins"] > 0) echo forum_strftime($lang['time_format'],$zeile["last_login_time"]); else echo "&nbsp;"; ?></td>
    <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><?php if ($zeile["user_lock"] == 0) { ?><a href="admin.php?user_lock=<?php echo $zeile["user_id"]; ?>&amp;order=<?php echo $order; ?>&amp;descasc=<?php echo $descasc; ?>&amp;ul=<?php echo $ul; ?>&amp;sam=<?php echo $sam; ?>" title="<?php echo str_replace("[name]", htmlsc($zeile["user_name"]), $lang['lock_user_lt']); ?>"><?php echo $lang['unlocked']; ?></a><?php } else { ?><a style="color: red;" href="admin.php?user_lock=<?php echo $zeile["user_id"]; ?>&amp;order=<?php echo $order; ?>&amp;descasc=<?php echo $descasc; ?>&amp;ul=<?php echo $ul; ?>&amp;sam=<?php echo $sam; ?>" title="<?php echo str_replace("[name]", htmlsc($zeile["user_name"]), $lang['unlock_user_lt']); ?>"><?php echo $lang['locked']; ?></a><?php } ?></td>
    <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><a href="admin.php?edit_user=<?php echo $zeile["user_id"]; ?>&amp;order=<?php echo $order; ?>&amp;descasc=<?php echo $descasc; ?>&amp;ul=<?php echo $ul; ?>&amp;sam=<?php echo $sam; ?>"><?php echo $lang_add['edit_link']; ?></a></td>
    <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><a href="admin.php?delete_user=<?php echo $zeile["user_id"]; ?>&amp;order=<?php echo $order; ?>&amp;descasc=<?php echo $descasc; ?>&amp;ul=<?php echo $ul; ?>&amp;sam=<?php echo $sam; ?>"><?php echo $lang_add['delete_link']; ?></a></td>
@@ -1546,7 +1553,7 @@ switch ($action)
    ?><form action="admin.php" method="post">
    <table class="normaltab" border="0" cellpadding="5" cellspacing="1"><?php
    ksort($settings);
-   while(list($key, $val) = each($settings))
+   foreach ($settings as $key => $val)
     {
      ?><tr>
      <td class="c"><b><?php echo $key; ?></b></td>
@@ -1666,7 +1673,7 @@ switch ($action)
   if (count($categories) > 1)
    {
     $cat_select = '<select class="kat" size="1" name="move_category">';
-    while(list($key, $val) = each($categories))
+    foreach ($categories as $key => $val)
      {
       if ($key!= $category_id) $cat_select .= '<option value="'. htmlsc($key) .'">'. htmlsc($val) .'</option>';
      }
