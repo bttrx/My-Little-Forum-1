@@ -63,9 +63,9 @@ $name = $zeile['name'];
 $name = htmlsc($name);
 ?><item>
 <title><?php echo $title; ?></title>
-<content:encoded><![CDATA[<i><?php if ($zeile['pid']==0) { $rss_author_info = str_replace("[name]", $name, $lang['rss_posting_by']); echo str_replace("[time]", strftime($lang['time_format'],$zeile["xtime"]), $rss_author_info); } else { $rss_author_info = str_replace("[name]", $name, $lang['rss_reply_by']); echo str_replace("[time]", strftime($lang['time_format'],$zeile["xtime"]), $rss_author_info); } ?></i><br /><br /><?php echo $ftext; ?>]]></content:encoded>
+<content:encoded><![CDATA[<i><?php if ($zeile['pid']==0) { $rss_author_info = str_replace("[name]", $name, $lang['rss_posting_by']); echo str_replace("[time]", forum_strftime($lang['time_format'],$zeile["xtime"]), $rss_author_info); } else { $rss_author_info = str_replace("[name]", $name, $lang['rss_reply_by']); echo str_replace("[time]", forum_strftime($lang['time_format'],$zeile["xtime"]), $rss_author_info); } ?></i><br /><br /><?php echo $ftext; ?>]]></content:encoded>
 <link><?php echo $settings['forum_address']."forum_entry.php?id=".$zeile['id']; ?></link>
-<pubDate><?php setlocale(LC_TIME, "C"); echo strftime($lang['rss_time'],$zeile['rss_time']); setlocale(LC_TIME, $lang['locale']); ?></pubDate>
+<pubDate><?php setlocale(LC_TIME, "C"); echo forum_strftime($lang['rss_time'],$zeile['rss_time']); setlocale(LC_TIME, $lang['locale']); ?></pubDate>
 </item>
 <?php
 }
