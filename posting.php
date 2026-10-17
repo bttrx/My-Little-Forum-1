@@ -23,12 +23,12 @@
 
 include("inc.php");
 
-if(count($_GET) > 0)
-foreach($_GET as $key => $value)
-$$key = $value;
-if(count($_POST) > 0)
-foreach($_POST as $key => $value)
-$$key = $value;
+foreach ($_GET as $key => $value) {
+ if (forum_request_variable_allowed($key, $value)) $$key = $value;
+}
+foreach ($_POST as $key => $value) {
+ if (forum_request_variable_allowed($key, $value)) $$key = $value;
+}
 
 if(empty($_SESSION[$settings['session_prefix'].'user_id']) && $settings['captcha_posting']==1)
  {
@@ -189,7 +189,7 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
       if ($edit_authorization == 1)
        {
         // fetch data of message which should be edited:
-        $edit_result = mysqli_query($connid, "SELECT tid, pid, user_id, name, email, hp, place, subject, category, text, email_notify, show_signature, locked, fixed, UNIX_TIMESTAMP(time) AS time, UNIX_TIMESTAMP(NOW() - INTERVAL ". $settings['edit_period'] ." MINUTE) AS edit_diff FROM ". $db_settings['forum_table'] ." WHERE id = ". intval($id));
+        $edit_result = mysqli_query($connid, "SELECT tid, pid, user_id, name, email, hp, place, subject, category, text, email_notify, show_signature, locked, fixed, UNIX_TIMESTAMP(time) AS time, UNIX_TIMESTAMP(NOW() - INTERVAL ". intval($settings['edit_period']) ." MINUTE) AS edit_diff FROM ". $db_settings['forum_table'] ." WHERE id = ". intval($id));
         if (!$edit_result) die($lang['db_error']);
         $field = mysqli_fetch_assoc($edit_result);
         mysqli_free_result($edit_result);
@@ -306,7 +306,7 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
 
      case "edit";
       // fetch missing data from database:
-      $edit_result = mysqli_query($connid, "SELECT name, locked, UNIX_TIMESTAMP(time) AS time, UNIX_TIMESTAMP(NOW() - INTERVAL ". $settings['edit_period'] ." MINUTE) AS edit_diff FROM ". $db_settings['forum_table'] ." WHERE id = ". intval($id));
+      $edit_result = mysqli_query($connid, "SELECT name, locked, UNIX_TIMESTAMP(time) AS time, UNIX_TIMESTAMP(NOW() - INTERVAL ". intval($settings['edit_period']) ." MINUTE) AS edit_diff FROM ". $db_settings['forum_table'] ." WHERE id = ". intval($id));
       if (!$edit_result) die($lang['db_error']);
       $field = mysqli_fetch_assoc($edit_result);
       mysqli_free_result($edit_result);
@@ -541,10 +541,10 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
                {
                 if (isset($setcookie) && $setcookie==1)
                  {
-                  setcookie("user_name",$name,time()+(3600*24*30));
-                  setcookie("user_email",$email,time()+(3600*24*30));
-                  setcookie("user_hp",$hp,time()+(3600*24*30));
-                  setcookie("user_place",$place,time()+(3600*24*30));
+                  forum_set_cookie("user_name", $name, time()+(3600*24*30));
+                  forum_set_cookie("user_email", $email, time()+(3600*24*30));
+                  forum_set_cookie("user_hp", $hp, time()+(3600*24*30));
+                  forum_set_cookie("user_place", $place, time()+(3600*24*30));
                  }
                }
 
@@ -743,14 +743,14 @@ switch ($show)
          if ($pr_hp != "")
           {
            if (substr($pr_hp,0,7) != "http://" && substr($pr_hp,0,8) != "https://" && substr($pr_hp,0,6) != "ftp://" && substr($pr_hp,0,9) != "gopher://" && substr($pr_hp,0,7) != "news://") $pr_hp = "http://".$pr_hp;
-           echo "<a href=\"" . $pr_hp . "\"><img src=\"img/homepage.gif\" alt=\"".$lang['homepage_alt']."\" width=\"13\" height=\"13\" /></a>";
+           $safe_pr_hp = forum_safe_link_target($pr_hp); if ($safe_pr_hp !== false) echo "<a href=\"" . $safe_pr_hp . "\"><img src=\"img/homepage.gif\" alt=\"".htmlsc($lang['homepage_alt'])."\" width=\"13\" height=\"13\" /></a>";
           }
          if (($pr_email != ""  && $hide_email != 1) && $pr_hp != "") { echo "&nbsp;"; }
          if ($pr_email != "" && $hide_email != 1) { echo '<a href="contact.php"><img src="img/email.gif" alt="'.$lang['email_alt'].'" title="'.str_replace("[name]", htmlsc($pr_name), $lang['email_to_user_linktitle']).'" width="13" height="10" /></a>'; }
          if (($pr_email != "" && $hide_email != 1) or $pr_hp !="") { echo "<br />"; }
          echo "<br />";
          if ($pr_place != "") { echo htmlsc($pr_place); echo ", <br />"; }
-         echo strftime($lang['time_format'],$pr_time); ?>
+         echo forum_strftime($lang['time_format'],$pr_time); ?>
          <div class="autorcellwidth">&nbsp;</div></td>
         <td class="titlecell"><div class="left"><h2><?php echo htmlsc($subject); ?></h2></div></td>
        </tr>
@@ -792,7 +792,7 @@ switch ($show)
           <?php
           $email_hp = ""; $place_wc = ""; $place_c = "";
           if (($pr_email != "" && $hide_email != 1) or $pr_hp != "") $email_hp = " ";
-          if ($pr_hp != "") { if (substr($pr_hp,0,7) != "http://" && substr($pr_hp,0,8) != "https://" && substr($pr_hp,0,6) != "ftp://" && substr($pr_hp,0,9) != "gopher://" && substr($pr_hp,0,7) != "news://") $pr_hp = "http://".$pr_hp; $email_hp .= "<a href=\"" . $pr_hp . "\" title=\"".htmlsc($pr_hp)."\"><img src=\"img/homepage.gif\" alt=\"".$lang['homepage_alt']."\" width=\"13\" height=\"13\" /></a>"; }
+          if ($pr_hp != "") { if (substr($pr_hp,0,7) != "http://" && substr($pr_hp,0,8) != "https://" && substr($pr_hp,0,6) != "ftp://" && substr($pr_hp,0,9) != "gopher://" && substr($pr_hp,0,7) != "news://") $pr_hp = "http://".$pr_hp; $safe_pr_hp = forum_safe_link_target($pr_hp); if ($safe_pr_hp !== false) $email_hp .= "<a href=\"" . $safe_pr_hp . "\" title=\"".htmlsc($pr_hp)."\"><img src=\"img/homepage.gif\" alt=\"".htmlsc($lang['homepage_alt'])."\" width=\"13\" height=\"13\" /></a>"; }
           if ($pr_email != ""  && $hide_email != 1 && $pr_hp != "") { $email_hp .= " "; }
           if ($pr_email != "" && $hide_email != 1) { $email_hp .= '<a href="contact.php"><img src="img/email.gif" alt="'.$lang['email_alt'].'" title="'.str_replace("[name]", htmlsc($pr_name), $lang['email_to_user_linktitle']).'" width="13" height="10" /></a>'; }
           if ($pr_place != "") { $place_c = htmlsc($pr_place) . ", "; $place_wc = htmlsc($pr_place); }
@@ -800,7 +800,7 @@ switch ($show)
           $lang['forum_author_marking'] = str_replace("[email_hp]", $email_hp, $lang['forum_author_marking']);
           $lang['forum_author_marking'] = str_replace("[place, ]", $place_c, $lang['forum_author_marking']);
           $lang['forum_author_marking'] = str_replace("[place]", $place_wc, $lang['forum_author_marking']);
-          $lang['forum_author_marking'] = str_replace("[time]", strftime($lang['time_format'],$pr_time), $lang['forum_author_marking']);
+          $lang['forum_author_marking'] = str_replace("[time]", forum_strftime($lang['time_format'],$pr_time), $lang['forum_author_marking']);
           ?>
           <p class="author"><?php echo $lang['forum_author_marking']; ?></p>
           <?php
@@ -887,7 +887,7 @@ switch ($show)
      <?php
      if (empty($id) || $id == 0 || $action=="edit" && isset($pid) && $pid == 0)
       {
-       while(list($key, $val) = each($categories))
+       foreach ($categories as $key => $val)
         {
          if($key!=0)
           {
@@ -1013,7 +1013,7 @@ switch ($show)
 
    case "delete form":
     $lang['thread_info'] = str_replace("[name]", htmlsc($field["name"]), $lang['thread_info']);
-    $lang['thread_info'] = str_replace("[time]", strftime($lang['time_format'],$field["tp_time"]), $lang['thread_info']);
+    $lang['thread_info'] = str_replace("[time]", forum_strftime($lang['time_format'],$field["tp_time"]), $lang['thread_info']);
     ?>
     <h2><?php echo $lang['delete_marking']; ?></h2>
     <p><?php echo $lang['delete_posting_sure']; if ($field["pid"]==0) echo "<br />".$lang['delete_whole_thread']; ?></p>
