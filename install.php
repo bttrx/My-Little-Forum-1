@@ -404,11 +404,9 @@ if (isset($_POST['form_submitted']))
      fixed tinyint(4) default '0',
      views int(11) default '0',
      PRIMARY KEY (id),
-     UNIQUE KEY id (id),
-     KEY tid (tid),
-     KEY category (category),
-     KEY pid (pid),
-     KEY fixed (fixed))";
+     KEY tid_time (tid, time),
+     KEY category_pid_fixed_last_answer (category, pid, fixed, last_answer),
+     KEY pid_fixed_last_answer (pid, fixed, last_answer))";
      $tabledef['categories'] = "CREATE TABLE ". $db_settings['category_table'] ." (
      id int(11) NOT NULL auto_increment,
      category_order int(11) NOT NULL,
@@ -459,7 +457,10 @@ if (isset($_POST['form_submitted']))
      $tabledef['uonline'] = "CREATE TABLE ". $db_settings['useronline_table'] ." (
      ip char(15) NOT NULL default '',
      time int(14) NOT NULL default '0',
-     user_id int(11) default '0')";
+     user_id int(11) default '0',
+     KEY time_idx (time),
+     KEY ip_idx (ip),
+     KEY user_id_idx (user_id))";
      // create tables:
      if (empty($errors))
       {
