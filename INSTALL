@@ -1,5 +1,13 @@
 INSTALLATION
 
+Updated installation: The script requires PHP > 8 and a MySQL/MariaDB database.
+
+Upload the forums software from the zip file to the server destination and start the install/update process at http://www.example.net/forum/install.php.
+After installing, install.php should remove it self, if not remove the file from the server!
+Edit the db_settings.php write permission to 444 or 644.
+
+---------------------------------------------------------------------------
+
 The script requires PHP > 4.1 and a MySQL database.
 
 * The file forum.zip contains a folder with the script files ("forum").
