@@ -23,12 +23,12 @@
 
 include("inc.php");
 
-if(count($_GET) > 0)
-foreach($_GET as $key => $value)
-$$key = $value;
-if(count($_POST) > 0)
-foreach($_POST as $key => $value)
-$$key = $value;
+foreach ($_GET as $key => $value) {
+ if (forum_request_variable_allowed($key, $value)) $$key = $value;
+}
+foreach ($_POST as $key => $value) {
+ if (forum_request_variable_allowed($key, $value)) $$key = $value;
+}
 
  function snav($page, $suchergebnisse, $count, $search, $ao, $category)  // Seiten-Navigation für suche.php
   {
@@ -212,7 +212,7 @@ if ($categories!=false)
   ?><select size="1" name="category"><?php
   if (isset($category) && $category==0) { ?><option value="0" selected="selected"><?php echo $lang['show_all_categories']; ?></option><?php }
   else { ?><option value="0"><?php echo $lang['show_all_categories']; ?></option><?php }
-  while(list($key, $val) = each($categories))
+  foreach ($categories as $key => $val)
    {
     if($key!=0)
      {
@@ -236,7 +236,7 @@ if (isset($search) && $search != "" || isset($show_postings) && $show_postings !
 $i=0;
 while ($entrydata = mysqli_fetch_assoc($result)) {
 $search_author_info_x = str_replace("[name]", htmlsc(stripslashes($entrydata["name"])), $lang['search_author_info']);
-$search_author_info_x = str_replace("[time]", strftime($lang['time_format'],$entrydata["Uhrzeit"]), $search_author_info_x);
+$search_author_info_x = str_replace("[time]", forum_strftime($lang['time_format'],$entrydata["Uhrzeit"]), $search_author_info_x);
 ?><p class="searchresults"><a class="<?php if ($entrydata["pid"] == 0) echo "thread"; else echo "reply-search"; ?>" href="<?php
 if (isset($_SESSION[$settings['session_prefix'].'user_view']) && $_SESSION[$settings['session_prefix'].'user_view']=="board") echo "board_entry.php?id=".$entrydata["tid"]."#p".$entrydata["id"];
 elseif (isset($_SESSION[$settings['session_prefix'].'user_view']) && $_SESSION[$settings['session_prefix'].'user_view']=="thread") echo "forum_entry.php?id=".$entrydata["id"];
