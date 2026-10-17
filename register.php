@@ -37,7 +37,7 @@ if(isset($_GET['action'])) $action = $_GET['action'];
 
 unset($errors);
 
-if(isset($_GET['id']) && isset($_GET['key']) && trim($_GET['key'])!='')
+if(isset($_GET['id']) && is_scalar($_GET['id']) && isset($_GET['key']) && is_string($_GET['key']) && trim($_GET['key'])!='')
  {
   $user_id = intval($_GET['id']);
   $key = trim($_GET['key']);
@@ -187,8 +187,8 @@ if(isset($_POST['register_submit']))
    // save user if no errors:
    if (empty($errors))
     {
-     $encoded_new_user_pw = md5($reg_pw);
-     $activate_code = md5(uniqid(rand()));
+     $encoded_new_user_pw = forum_password_hash($reg_pw);
+     $activate_code = bin2hex(random_bytes(16));
      @mysqli_query($connid, "INSERT INTO ". $db_settings['userdata_table'] ." (user_type, user_name, user_pw, user_email, hide_email, profile, last_login, last_logout, user_ip, registered, user_view, personal_messages, activate_code) VALUES ('user','". mysqli_real_escape_string($connid, $new_user_name) ."','". mysqli_real_escape_string($connid, $encoded_new_user_pw) ."','". mysqli_real_escape_string($connid, $new_user_email) ."','1','',NOW(),NOW(),'". mysqli_real_escape_string($connid, $_SERVER["REMOTE_ADDR"]) ."',NOW(),'". mysqli_real_escape_string($connid, $settings['standard']) ."','1', '". mysqli_real_escape_string($connid, $activate_code) ."')") or die($lang['db_error']);
 
      // get new user ID:
