@@ -194,6 +194,7 @@ elseif (isset($show_postings) && empty($search))
   if (!$user_name_result) die($lang['db_error']);
   $field = mysqli_fetch_assoc($user_name_result);
   mysqli_free_result($user_name_result);
+  if (!is_array($field) || !isset($field['user_name'])) { header('Location: search.php'); exit; }
   $lang['show_userdata_linktitle'] = str_replace("[name]", htmlsc(stripslashes($field["user_name"])), $lang['show_userdata_linktitle']);
   $lang['postings_by_user'] = str_replace("[name]", "<a href=\"user.php?id=".$show_postings."\" title=\"".$lang['show_userdata_linktitle']."\">".htmlsc(stripslashes($field["user_name"]))."</a>", $lang['postings_by_user']);
   $subnav_1 .= "<img src=\"img/where.gif\" alt=\"\" width=\"11\" height=\"8\" border=\"0\"><b>".$lang['postings_by_user']."</b>";

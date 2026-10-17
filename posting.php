@@ -99,13 +99,17 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
       $result_array = mysqli_fetch_assoc($user_id_result);
       mysqli_free_result($user_id_result);
 
-      $user_type_result = mysqli_query($connid, "SELECT user_type FROM ". $db_settings['userdata_table'] ." WHERE user_id = ". intval($result_array["user_id"]) ." LIMIT 1");
-      if (!$user_type_result) die($lang['db_error']);
-      $user_result_array = mysqli_fetch_assoc($user_type_result);
-      mysqli_free_result($user_type_result);
+      $posting_exists = is_array($result_array) && isset($result_array['user_id']);
+      $user_result_array = array('user_type' => 'user');
+      if ($posting_exists) {
+       $user_type_result = mysqli_query($connid, "SELECT user_type FROM ". $db_settings['userdata_table'] ." WHERE user_id = ". intval($result_array["user_id"]) ." LIMIT 1");
+       if (!$user_type_result) die($lang['db_error']);
+       $user_result_array = mysqli_fetch_assoc($user_type_result) ?: array('user_type' => 'user');
+       mysqli_free_result($user_type_result);
+      }
 
       // ist da jemand bekanntes?
-      if (isset($_SESSION[$settings['session_prefix'].'user_id']))
+      if ($posting_exists && isset($_SESSION[$settings['session_prefix'].'user_id']))
        {
         // Admin darf alles:
         if ($_SESSION[$settings['session_prefix'].'user_type'] == "admin")
@@ -166,9 +170,10 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
         $result = mysqli_query($connid, "SELECT tid, pid, name, subject, category, text, locked FROM ". $db_settings['forum_table'] ." WHERE id = ". intval($id));
         if (!$result) die($lang['db_error']);
         $field = mysqli_fetch_assoc($result);
-        if (mysqli_num_rows($result) != 1) $id = 0;
-        else
-         {
+        if (mysqli_num_rows($result) != 1 || !is_array($field)) {
+         $id = 0;
+         $show = "form";
+        } else {
           $thema = $field["tid"];
           $subject = $field["subject"];
           $p_category = $field["category"];
@@ -177,10 +182,10 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
           $text = wordwrap($text);
           // Zitatzeichen an den Anfang jeder Zeile stellen:
           $text = preg_replace("/^/m", $settings['quote_symbol']." ", $text);
+          if (($field['locked'] ?? 0) > 0 && (empty($_SESSION[$settings['session_prefix'].'user_type']) || (isset($_SESSION[$settings['session_prefix'].'user_type']) && $_SESSION[$settings['session_prefix'].'user_type'] != 'admin' && $_SESSION[$settings['session_prefix'].'user_type'] != 'mod'))) { $show = "no authorization"; $reason = $lang['thread_locked_error']; }
+          else $show = "form";
          }
         mysqli_free_result($result);
-        if ($field['locked'] > 0 && (empty($_SESSION[$settings['session_prefix'].'user_type']) || (isset($_SESSION[$settings['session_prefix'].'user_type']) && $_SESSION[$settings['session_prefix'].'user_type'] != 'admin' && $_SESSION[$settings['session_prefix'].'user_type'] != 'mod'))) { $show = "no authorization"; $reason = $lang['thread_locked_error']; }
-        else $show = "form";
        }
       else $show = "form";
      break;
@@ -193,6 +198,7 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
         if (!$edit_result) die($lang['db_error']);
         $field = mysqli_fetch_assoc($edit_result);
         mysqli_free_result($edit_result);
+        if (!is_array($field) || !isset($field['tid'])) { header('Location: index.php'); exit; }
         $thema = $field["tid"];
         $tid = $field["tid"];
         $pid = $field["pid"];
@@ -221,6 +227,7 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
         $delete_result = mysqli_query($connid, "SELECT tid, pid, UNIX_TIMESTAMP(time + INTERVAL ". $time_difference ." HOUR) AS tp_time, name, subject, category FROM ". $db_settings['forum_table'] ." WHERE id = ". intval($id));
         if(!$delete_result) die($lang['db_error']);
         $field = mysqli_fetch_assoc($delete_result);
+        if (!is_array($field) || !isset($field['tid'])) { header('Location: index.php'); exit; }
         $aname = $field["name"];
         $thema = $field["tid"];
         $show = "delete form";
@@ -234,6 +241,8 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
          $pid_result=mysqli_query($connid, "SELECT pid FROM ". $db_settings['forum_table'] ." WHERE id = ". intval($id));
          if (!$pid_result) die($lang['db_error']);
          $feld = mysqli_fetch_assoc($pid_result);
+         mysqli_free_result($pid_result);
+         if (!is_array($feld) || !isset($feld['pid'])) { header('Location: index.php'); exit; }
          if ($feld["pid"] == 0)
           {
            $delete_result = mysqli_query($connid, "DELETE FROM ". $db_settings['forum_table'] ." WHERE tid = ". intval($id));
@@ -243,12 +252,13 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
            $last_answer_result=mysqli_query($connid, "SELECT tid, time, last_answer FROM ". $db_settings['forum_table'] ." WHERE id = ". intval($id));
            $field = mysqli_fetch_assoc($last_answer_result);
            mysqli_free_result($last_answer_result);
+           if (!is_array($field) || !isset($field['time'], $field['last_answer'], $field['tid'])) { header('Location: index.php'); exit; }
            // if message is newest in topic:
            if ($field['time'] == $field['last_answer'])
             {
              // vorige Antwort heraussuchen und "last_answer" aktualisieren:
              $last_answer_result=mysqli_query($connid, "SELECT time FROM ". $db_settings['forum_table'] ." WHERE tid = ". intval($field['tid']) ." AND time < '". mysqli_real_escape_string($connid, $field['time']) ."' ORDER BY time DESC LIMIT 1");
-             $field2 = mysqli_fetch_assoc($last_answer_result);
+             $field2 = mysqli_fetch_assoc($last_answer_result) ?: array('time' => $field['time']);
              mysqli_free_result($last_answer_result);
              $update_result=mysqli_query($connid, "UPDATE ". $db_settings['forum_table'] ." SET time=time, last_answer='". mysqli_real_escape_string($connid, $field2['time']) ."' WHERE tid=". intval($field['tid']));
             }
@@ -310,6 +320,7 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
       if (!$edit_result) die($lang['db_error']);
       $field = mysqli_fetch_assoc($edit_result);
       mysqli_free_result($edit_result);
+      if (!is_array($field) || !isset($field['name'])) { header('Location: index.php'); exit; }
       if (empty($name)) $name = $field["name"];
      break;
     }
@@ -454,19 +465,21 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
              if ($settings['email_notification'] == 1)
               {
                $parent_result = mysqli_query($connid, "SELECT user_id, name, email, subject, text, email_notify FROM ". $db_settings['forum_table'] ." WHERE id = ". intval($id) ." LIMIT 1");
+               if (!$parent_result) die($lang['db_error']);
                $parent = mysqli_fetch_assoc($parent_result);
-               if ($parent["email_notify"] == 1)
+               mysqli_free_result($parent_result);
+               if (is_array($parent) && ($parent["email_notify"] ?? 0) == 1)
                 {
                  // wenn das Posting von einem registrierten User stammt, E-Mail-Adresse aus den User-Daten holen:
                  if ($parent["user_id"] > 0)
                   {
                    $email_result = mysqli_query($connid, "SELECT user_name, user_email, user_view FROM ". $db_settings['userdata_table'] ." WHERE user_id = ". intval($parent["user_id"]) ." LIMIT 1");
                    if (!$email_result) die($lang['db_error']);
-                   $field = mysqli_fetch_assoc($email_result);
+                   $field = mysqli_fetch_assoc($email_result) ?: array('user_name' => $parent['name'], 'user_email' => $parent['email'], 'user_view' => $settings['standard']);
                    mysqli_free_result($email_result);
-                   $parent["name"] = $field["user_name"];
-                   $parent["email"] = $field["user_email"];
-                   $parent["user_view"] = $field["user_view"];
+                   $parent["name"] = $field["user_name"] ?? $parent['name'];
+                   $parent["email"] = $field["user_email"] ?? $parent['email'];
+                   $parent["user_view"] = $field["user_view"] ?? $settings['standard'];
                   }
                  else $parent["user_view"] = $settings['standard'];
                  $ip = $_SERVER["REMOTE_ADDR"];
@@ -564,6 +577,7 @@ if ($settings['entries_by_users_only'] == 1 && isset($_SESSION[$settings['sessio
           if (!$tid_result) die($lang['db_error']);
           $field = mysqli_fetch_assoc($tid_result);
           mysqli_free_result($tid_result);
+          if (!is_array($field) || !isset($field['tid'], $field['text'], $field['subject'], $field['name'])) { header('Location: index.php'); exit; }
           // unnoticed editing for admins and mods:
           if (isset($_SESSION[$settings['session_prefix'].'user_type']) && $_SESSION[$settings['session_prefix'].'user_type']=="admin" && $settings['dont_reg_edit_by_admin']==1 || isset($_SESSION[$settings['session_prefix'].'user_type']) && $_SESSION[$settings['session_prefix'].'user_type']=="mod" && $settings['dont_reg_edit_by_mod']==1 || ($field['text'] == $text && $field['subject'] == $subject && $field['name'] == $name && isset($_SESSION[$settings['session_prefix'].'user_type']) && ($_SESSION[$settings['session_prefix'].'user_type']=="admin" || $_SESSION[$settings['session_prefix'].'user_type']=="mod")))
            {
@@ -712,14 +726,14 @@ switch ($show)
        if ($action=="edit") $pr_id = $p_user_id; else $pr_id = $_SESSION[$settings['session_prefix']."user_id"];
        $preview_result = mysqli_query($connid, "SELECT user_name, user_email, hide_email, user_hp, user_place, signature FROM ". $db_settings['userdata_table'] ." WHERE user_id = ". intval($pr_id) ." LIMIT 1");
        if (!$preview_result) die($lang['db_error']);
-       $field = mysqli_fetch_assoc($preview_result);
+       $field = mysqli_fetch_assoc($preview_result) ?: array('user_name' => '', 'user_email' => '', 'hide_email' => 0, 'user_hp' => '', 'user_place' => '', 'signature' => '');
        mysqli_free_result($preview_result);
-       $pr_name = $field["user_name"];
-       $pr_email = $field["user_email"];
-       $hide_email = $field["hide_email"];
-       $pr_hp = $field["user_hp"];
-       $pr_place = $field["user_place"];
-       $pr_signature = $field["signature"];
+       $pr_name = $field["user_name"] ?? '';
+       $pr_email = $field["user_email"] ?? '';
+       $hide_email = $field["hide_email"] ?? 0;
+       $pr_hp = $field["user_hp"] ?? '';
+       $pr_place = $field["user_place"] ?? '';
+       $pr_signature = $field["signature"] ?? '';
       }
 
      if (empty($pr_name)) $pr_name = $name;

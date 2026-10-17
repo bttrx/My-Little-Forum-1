@@ -195,6 +195,7 @@ if(isset($_POST['register_submit']))
      $new_user_id_result = mysqli_query($connid, "SELECT user_id FROM ". $db_settings['userdata_table'] ." WHERE user_name = '". mysqli_real_escape_string($connid, $new_user_name) ."' LIMIT 1");
      if (!$new_user_id_result) die($lang['db_error']);
      $field = mysqli_fetch_assoc($new_user_id_result);
+     if (!is_array($field) || !isset($field['user_id'])) { mysqli_free_result($new_user_id_result); die($lang['db_error']); }
      $new_user_id = $field['user_id'];
      mysqli_free_result($new_user_id_result);
 

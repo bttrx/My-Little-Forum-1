@@ -185,6 +185,7 @@ switch ($action)
     if (!$pwf_result) die($lang['db_error']);
     $field = mysqli_fetch_assoc($pwf_result);
     mysqli_free_result($pwf_result);
+    if (!is_array($field) || !isset($field['user_id'], $field['user_name'], $field['user_email'])) { header("location: ".basename($_SERVER['PHP_SELF'])."?msg=pwf_failed"); die("<a href=\"".basename($_SERVER['PHP_SELF'])."?msg=pwf_failed\">further...</a>"); }
     if($field["user_email"] == $pwf_email)
      {
       $pwf_code = bin2hex(random_bytes(16));
@@ -230,6 +231,7 @@ switch ($action)
     if (!$pwf_result) die($lang['db_error']);
     $field = mysqli_fetch_assoc($pwf_result);
     mysqli_free_result($pwf_result);
+    if (!is_array($field) || !isset($field['user_id'], $field['pwf_code'], $field['user_name'], $field['user_email'])) { header("location: ".basename($_SERVER['PHP_SELF'])."?msg=pwf_failed"); die("<a href=\"".basename($_SERVER['PHP_SELF'])."?msg=pwf_failed\">further...</a>"); }
     if ($field['user_id'] == $_GET["activate"] && $field['pwf_code'] == $_GET['code'])
      {
       // generate new password:

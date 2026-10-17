@@ -427,7 +427,13 @@ function user_online()
   if (isset($_SESSION[$settings['session_prefix'].'user_id'])) $ip = "uid_".$_SESSION[$settings['session_prefix'].'user_id'];
   else $ip = $_SERVER['REMOTE_ADDR'];
   @mysqli_query($connid, "DELETE FROM ". $db_settings['useronline_table'] ." WHERE time < ". intval($diff));
-  list($is_online) = @mysqli_fetch_row(@mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['useronline_table'] ." WHERE ip= '". mysqli_real_escape_string($connid, $ip) ."'"));
+  $online_result = @mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['useronline_table'] ." WHERE ip= '". mysqli_real_escape_string($connid, $ip) ."'");
+  $is_online = 0;
+  if ($online_result) {
+   $online_row = mysqli_fetch_row($online_result);
+   mysqli_free_result($online_result);
+   if (is_array($online_row) && isset($online_row[0])) $is_online = (int)$online_row[0];
+  }
   if ($is_online > 0) @mysqli_query($connid, "UPDATE ". $db_settings['useronline_table'] ." SET time='".time()."', user_id='". intval($user_id) ."' WHERE ip='". mysqli_real_escape_string($connid, $ip) ."'");
   else @mysqli_query($connid, "INSERT INTO ". $db_settings['useronline_table'] ." SET time='". time() ."', ip='". mysqli_real_escape_string($connid, $ip) ."', user_id=". intval($user_id));
   #return $user_online;

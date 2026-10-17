@@ -48,6 +48,7 @@ function thread($id, $aktuellerEintrag = 0, $tiefe = 0)
   if(!$posting_result) die($lang['db_error']);
   $entrydata = mysqli_fetch_assoc($posting_result);
   mysqli_free_result($posting_result);
+  if (!is_array($entrydata)) return;
 
   if ($entrydata["user_id"] > 0)
    {
@@ -55,16 +56,20 @@ function thread($id, $aktuellerEintrag = 0, $tiefe = 0)
     if (!$userdata_result) die($lang['db_error']);
     $userdata = mysqli_fetch_assoc($userdata_result);
     mysqli_free_result($userdata_result);
-    $entrydata["email"] = $userdata["user_email"];
-    $entrydata["hide_email"] = $userdata["hide_email"];
-    $entrydata["place"] = $userdata["user_place"];
-    $entrydata["hp"] = $userdata["user_hp"];
-    if ($entrydata["show_signature"]==1) $signature = $userdata["signature"];
+    if (is_array($userdata)) {
+     $entrydata["email"] = $userdata["user_email"] ?? $entrydata["email"];
+     $entrydata["hide_email"] = $userdata["hide_email"] ?? 0;
+     $entrydata["place"] = $userdata["user_place"] ?? $entrydata["place"];
+     $entrydata["hp"] = $userdata["user_hp"] ?? $entrydata["hp"];
+     if ($entrydata["show_signature"]==1) $signature = $userdata["signature"] ?? '';
+    } else {
+     $entrydata["hide_email"] = 0;
+    }
    }
 
    // Posting heraussuchen, auf das geantwortet wurde:
    $result_a = mysqli_query($connid, "SELECT name FROM ". $db_settings['forum_table'] ." WHERE id = ". intval($parent_array[$id]["pid"]));
-   $posting_a = mysqli_fetch_assoc($result_a);
+   $posting_a = mysqli_fetch_assoc($result_a) ?: array('name' => '');
    mysqli_free_result($result_a);
 
    ?><div class="mixdivl" style="margin-left: <?php if ($tiefe==0 or $tiefe >= ($settings['max_thread_indent_mix_topic']/$settings['thread_indent_mix_topic'])) echo "0"; else echo $settings['thread_indent_mix_topic']; ?>px;">

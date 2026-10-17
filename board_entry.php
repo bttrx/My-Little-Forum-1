@@ -120,13 +120,17 @@ if (!isset($_SESSION[$settings['session_prefix'].'user_id']) && isset($_COOKIE['
        if (!$userdata_result_t) die($lang['db_error']);
        $userdata = mysqli_fetch_assoc($userdata_result_t);
        mysqli_free_result($userdata_result_t);
-       $thread["email"] = $userdata["user_email"];
-       $thread["hide_email"] = $userdata["hide_email"];
-       $thread["place"] = $userdata["user_place"];
-       $thread["hp"] = $userdata["user_hp"];
-       if ($userdata["user_type"] == "admin" && $settings['admin_mod_highlight'] == 1) $mark_admin = true;
-       elseif ($userdata["user_type"] == "mod" && $settings['admin_mod_highlight'] == 1) $mark_mod = true;
-       if ($thread["show_signature"]==1) $signature = $userdata["signature"];
+       if (is_array($userdata)) {
+        $thread["email"] = $userdata["user_email"] ?? $thread["email"];
+        $thread["hide_email"] = $userdata["hide_email"] ?? 0;
+        $thread["place"] = $userdata["user_place"] ?? $thread["place"];
+        $thread["hp"] = $userdata["user_hp"] ?? $thread["hp"];
+        if (($userdata["user_type"] ?? '') == "admin" && $settings['admin_mod_highlight'] == 1) $mark_admin = true;
+        elseif (($userdata["user_type"] ?? '') == "mod" && $settings['admin_mod_highlight'] == 1) $mark_mod = true;
+        if ($thread["show_signature"]==1) $signature = $userdata["signature"] ?? '';
+       } else {
+        $thread["hide_email"] = 0;
+       }
       }
      $result=mysqli_query($connid, "SELECT id, tid, pid, user_id, UNIX_TIMESTAMP(time + INTERVAL ". $time_difference ." HOUR) AS Uhrzeit,
                         UNIX_TIMESTAMP(time) AS time, UNIX_TIMESTAMP(edited + INTERVAL ". $time_difference ." HOUR) AS e_Uhrzeit,
@@ -231,19 +235,23 @@ echo $header;
        if (!$userdata_result) die($lang['db_error']);
        $userdata = mysqli_fetch_assoc($userdata_result);
        mysqli_free_result($userdata_result);
-       $entrydata["email"] = $userdata["user_email"];
-       $entrydata["hide_email"] = $userdata["hide_email"];
-       $entrydata["place"] = $userdata["user_place"];
-       $entrydata["hp"] = $userdata["user_hp"];
-       if ($userdata["user_type"] == "admin" && $settings['admin_mod_highlight'] == 1) $mark_admin = true;
-       elseif ($userdata["user_type"] == "mod" && $settings['admin_mod_highlight'] == 1) $mark_mod = true;
-       if ($entrydata["show_signature"]==1) $signature = $userdata["signature"];
+       if (is_array($userdata)) {
+        $entrydata["email"] = $userdata["user_email"] ?? $entrydata["email"];
+        $entrydata["hide_email"] = $userdata["hide_email"] ?? 0;
+        $entrydata["place"] = $userdata["user_place"] ?? $entrydata["place"];
+        $entrydata["hp"] = $userdata["user_hp"] ?? $entrydata["hp"];
+        if (($userdata["user_type"] ?? '') == "admin" && $settings['admin_mod_highlight'] == 1) $mark_admin = true;
+        elseif (($userdata["user_type"] ?? '') == "mod" && $settings['admin_mod_highlight'] == 1) $mark_mod = true;
+        if ($entrydata["show_signature"]==1) $signature = $userdata["signature"] ?? '';
+       } else {
+        $entrydata["hide_email"] = 0;
+       }
       }
 
     //if ($i >= $be_page * $settings['answers_per_topic'] && $i < $be_page * $settings['answers_per_topic'] + $settings['answers_per_topic']) { ?>
        <?php // Posting heraussuchen, auf das geantwortet wurde:
         $result_a = mysqli_query($connid, "SELECT name FROM ". $db_settings['forum_table'] ." WHERE id = ". intval($entrydata["pid"]));
-        $posting_a = mysqli_fetch_assoc($result_a);
+        $posting_a = mysqli_fetch_assoc($result_a) ?: array('name' => '');
         mysqli_free_result($result_a); ?>
     <tr>
      <td class="autorcell" rowspan="2" valign="top"><?php
