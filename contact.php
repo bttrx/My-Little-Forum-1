@@ -64,7 +64,7 @@ if (isset($id) || isset($uid) || isset($forum_contact))
     $ue_field = mysqli_fetch_assoc($ue_result);
     mysqli_free_result($ue_result);
     $sender_name = $_SESSION[$settings['session_prefix'].'user_name'];
-    $sender_email = is_array($ue_field) ? (string)($ue_field['user_email'] ?? '') : '';
+    $sender_email = $ue_field['user_email'];
    }
 
   if (isset($id))
@@ -73,9 +73,8 @@ if (isset($id) || isset($uid) || isset($forum_contact))
    if (!$result) die($lang['db_error']);
    $field = mysqli_fetch_assoc($result);
    mysqli_free_result($result);
-   if (!is_array($field)) { header('Location: index.php'); exit; }
-   $name = $field['name'] ?? '';
-   $email = $field['email'] ?? '';
+   $name = $field['name'];
+   $email = $field['email'];
   }
   elseif (isset($uid))
   {
@@ -83,10 +82,9 @@ if (isset($id) || isset($uid) || isset($forum_contact))
    if (!$result) die($lang['db_error']);
    $field = mysqli_fetch_assoc($result);
    mysqli_free_result($result);
-   if (!is_array($field)) { header('Location: index.php'); exit; }
-   $name = $field['user_name'] ?? '';
-   $email = $field['user_email'] ?? '';
-   $hide_email = $field['hide_email'] ?? 0;
+   $name = $field['user_name'];
+   $email = $field['user_email'];
+   $hide_email = $field['hide_email'];
   }
 
   if (isset($field['user_id']) && $field['user_id'] > 0 && empty($uid))
@@ -95,12 +93,8 @@ if (isset($id) || isset($uid) || isset($forum_contact))
   if (!$user_result) die($lang['db_error']);
   $user_field = mysqli_fetch_assoc($user_result);
   mysqli_free_result($user_result);
-  if (is_array($user_field)) {
-   $email = $user_field['user_email'] ?? $email;
-   $hide_email = $user_field['hide_email'] ?? 0;
-  } else {
-   $hide_email = 0;
-  }
+  $email = $user_field['user_email'];
+  $hide_email = $user_field['hide_email'];
   }
 
   #if (empty($_POST["form_submitted"])) $subject = $field['subject'];

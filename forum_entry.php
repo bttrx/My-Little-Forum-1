@@ -77,17 +77,13 @@ if ($settings['access_for_users_only'] == 1 && isset($_SESSION[$settings['sessio
       if (!$userdata_result) die($lang['db_error']);
       $userdata = mysqli_fetch_assoc($userdata_result);
       mysqli_free_result($userdata_result);
-      if (is_array($userdata)) {
-       $entrydata["email"] = $userdata["user_email"] ?? $entrydata["email"];
-       $entrydata["hide_email"] = $userdata["hide_email"] ?? 0;
-       $entrydata["place"] = $userdata["user_place"] ?? $entrydata["place"];
-       $entrydata["hp"] = $userdata["user_hp"] ?? $entrydata["hp"];
-       if (($userdata["user_type"] ?? '') == "admin" && $settings['admin_mod_highlight'] == 1) $mark_admin = true;
-       elseif (($userdata["user_type"] ?? '') == "mod" && $settings['admin_mod_highlight'] == 1) $mark_mod = true;
-       if ($entrydata["show_signature"]==1) $signature = $userdata["signature"] ?? '';
-      } else {
-       $entrydata["hide_email"] = 0;
-      }
+      $entrydata["email"] = $userdata["user_email"];
+      $entrydata["hide_email"] = $userdata["hide_email"];
+      $entrydata["place"] = $userdata["user_place"];
+      $entrydata["hp"] = $userdata["user_hp"];
+      if ($userdata["user_type"] == "admin" && $settings['admin_mod_highlight'] == 1) $mark_admin = true;
+      elseif ($userdata["user_type"] == "mod" && $settings['admin_mod_highlight'] == 1) $mark_mod = true;
+      if ($entrydata["show_signature"]==1) $signature = $userdata["signature"];
      }
    }
    else { header("location: forum.php"); die(); }

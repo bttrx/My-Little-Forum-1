@@ -94,38 +94,10 @@ if (!isset($_SESSION[$settings['session_prefix'].'user_id']) && isset($_COOKIE['
                         UNIX_TIMESTAMP(last_answer) AS last_answer, name, subject, category, marked, fixed, views FROM ". $db_settings['forum_table'] ." WHERE category = ". intval($category) ." AND pid = 0 ORDER BY fixed DESC, ". $order ." ". $descasc ." LIMIT ". intval($ul) .", ". intval($settings['topics_per_page']));
    if(!$result) die($lang['db_error']);
    // how many entries?
-   $pid_result = mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['forum_table'] ." WHERE pid = 0 AND category = ". intval($category));
+   $pid_result = mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['forum_table'] ." WHERE pid = '0' AND category = '". intval($category));
    list($thread_count) = mysqli_fetch_row($pid_result);
    mysqli_free_result($pid_result);
   }
-
-// Batch-load page topics, summary counts, last-reply links, and all entries in
-// those topics. This avoids multiple round trips for each topic on this page.
-$topics = array();
-$topics_loaded = false;
-if (isset($result) && $result instanceof mysqli_result) {
-    $topics_loaded = true;
-    while ($topic_row = mysqli_fetch_assoc($result)) $topics[] = $topic_row;
-    mysqli_free_result($result);
-
-    $topic_ids = array();
-    foreach ($topics as $topic_row) $topic_ids[] = (int)$topic_row['tid'];
-    $topic_metadata = forum_fetch_topic_summary_metadata($topic_ids, !empty($settings['last_reply_link']) && $settings['last_reply_link'] == 1);
-    $reply_counts = $topic_metadata['counts'];
-    $last_replies = $topic_metadata['last_replies'];
-
-    $topic_ids = array_values(array_unique(array_filter(array_map('intval', $topic_ids), function ($value) { return $value > 0; })));
-    if ($topic_ids) {
-        $topic_ids_sql = implode(',', $topic_ids);
-        $thread_result = mysqli_query($connid, "SELECT id, pid, tid, UNIX_TIMESTAMP(time) AS time, UNIX_TIMESTAMP(time + INTERVAL ". $time_difference ." HOUR) AS Uhrzeit, name, subject, category FROM ". $db_settings['forum_table'] ." WHERE tid IN (". $topic_ids_sql .") ORDER BY tid ASC, time ASC, id ASC");
-        if (!$thread_result) die($lang['db_error']);
-        while ($tmp = mysqli_fetch_assoc($thread_result)) {
-            $parent_array[(int)$tmp['id']] = $tmp;
-            $child_array[(int)$tmp['pid']][] = (int)$tmp['id'];
-        }
-        mysqli_free_result($thread_result);
-    }
-}
 
 $subnav_1 = '<a class="textlink" href="posting.php?view=mix&amp;category='.$category.'" title="'.$lang['new_entry_linktitle'].'">'.$lang['new_entry_linkname'].'</a>';
 $subnav_2 = '';
@@ -155,7 +127,7 @@ if ($categories!=false && $categories != "not accessible")
 parse_template();
 echo $header;
 
-if($thread_count > 0 && $topics_loaded)
+if($thread_count > 0 && isset($result))
  {
   ?><table class="normaltab" border="0" cellpadding="5" cellspacing="1">
   <tr>
@@ -173,18 +145,37 @@ if($thread_count > 0 && $topics_loaded)
   </tr>
   <?php
   $i=0;
-  foreach ($topics as $zeile) {
+  while ($zeile = mysqli_fetch_assoc($result)) {
 
-  $answers_count = max(0, (isset($reply_counts[(int)$zeile['tid']]) ? $reply_counts[(int)$zeile['tid']] : 1) - 1);
-  if ($settings['last_reply_link'] == 1) {
-      $last_answer = isset($last_replies[(int)$zeile['tid']]) ? $last_replies[(int)$zeile['tid']] : array('id' => (int)$zeile['id'], 'name' => $zeile['name']);
+  // count replies:
+  $pid_resultc = mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['forum_table'] ." WHERE tid = ". intval($zeile["tid"]));
+  list($answers_count) = mysqli_fetch_row($pid_resultc);
+  $answers_count = $answers_count - 1;
+  mysqli_free_result($pid_resultc);
+
+  // data for link to last reply:
+  if ($settings['last_reply_link'] == 1)
+  {
+   $last_answer_result = mysqli_query($connid, "SELECT name, id FROM ". $db_settings['forum_table'] ." WHERE tid = ". intval($zeile["tid"]) ." ORDER BY time DESC LIMIT 1");
+   $last_answer = mysqli_fetch_assoc($last_answer_result);
+   mysqli_free_result($last_answer_result);
   }
   ?><tr>
   <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><?php
   ?><a class="<?php if ((isset($_SESSION[$settings['session_prefix'].'newtime']) && $_SESSION[$settings['session_prefix'].'newtime'] < $zeile["last_answer"]) || (($zeile["pid"]==0) && empty($_SESSION[$settings['session_prefix'].'newtime']) && $zeile["last_answer"] > $last_visit)) echo "threadnew"; else echo "thread"; ?>" href="mix_entry.php?id=<?php echo $zeile["tid"]; if ($page != 0 || $category != 0 || $order != "last_answer" || $descasc != "DESC") echo '&amp;page='.$page.'&amp;category='.$category.'&amp;order='.$order.'&amp;descasc='.$descasc; ?>"><?php echo htmlsc($zeile["subject"]); ?></a><?php
   if ($zeile["fixed"] == 1) { ?> <img src="img/fixed.gif" width="9" height="9" title="<?php echo $lang['fixed']; ?>" alt="*" /><?php }
   if ($settings['all_views_direct'] == 1) { echo " <span class=\"small\">"; if ($settings['board_view'] == 1) { ?><a href="board_entry.php?id=<?php echo $zeile["tid"]; ?>"><img src="img/board_d.gif" alt="[Board]" title="<?php echo $lang['open_in_board_linktitle']; ?>" width="12" height="9" onmouseover="this.src='img/board_mo.gif';" onmouseout="this.src='img/board_d.gif';" /></a><?php } if ($settings['thread_view']==1) {?><a href="forum_entry.php?id=<?php echo $zeile["tid"]; ?>"><img src="img/thread_d.gif" alt="[Thread]" title="<?php echo $lang['open_in_thread_linktitle']; ?>" width="12" height="9" onmouseover="this.src='img/thread_mo.gif';" onmouseout="this.src='img/thread_d.gif';" /></a><?php } echo "</span>"; }
-      mix_tree($zeile["tid"]); ?></td>
+      $thread_result=mysqli_query($connid, "SELECT id, pid, tid, UNIX_TIMESTAMP(time) AS time, UNIX_TIMESTAMP(time + INTERVAL ". $time_difference ." HOUR) AS Uhrzeit,
+                     name, subject, category FROM ". $db_settings['forum_table'] ."
+                     WHERE tid = ". intval($zeile["tid"]) ." ORDER BY time ASC");
+         // Ergebnisse einlesen:
+         while($tmp = mysqli_fetch_assoc($thread_result))
+          {                                           // Ergebnis holen
+           $parent_array[ $tmp["id"] ] = $tmp;          // Ergebnis im Array ablegen
+           $child_array[ $tmp["pid"] ][] =  $tmp["id"]; // Vorwärtsbezüge konstruieren
+          }
+      mix_tree($zeile["tid"]);
+      mysqli_free_result($thread_result); ?></td>
       <?php if ($categories!=false && $category == 0) { ?>
       <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><?php if(isset($categories[$zeile["category"]]) && $categories[$zeile["category"]]!='') { ?><a title="<?php echo str_replace("[category]", $categories[$zeile["category"]], $lang['choose_category_linktitle']); if (isset($category_accession[$zeile["category"]]) && $category_accession[$zeile["category"]] == 2) echo " ".$lang['admin_mod_category']; elseif (isset($category_accession[$zeile["category"]]) && $category_accession[$zeile["category"]] == 1) echo " ".$lang['registered_users_category']; ?>" href="mix.php?category=<?php echo $zeile["category"]; ?>"><span class="<?php if (isset($category_accession[$zeile["category"]]) && $category_accession[$zeile["category"]] == 2) echo "category-adminmod-b"; elseif (isset($category_accession[$zeile["category"]]) && $category_accession[$zeile["category"]] == 1) echo "category-regusers-b"; else echo "category-b"; ?>"><?php echo $categories[$zeile["category"]]; ?></span></a><?php } else echo "&nbsp;"; ?></td>
       <?php } ?>
@@ -201,6 +192,7 @@ if($thread_count > 0 && $topics_loaded)
      ?></a></td><?php } ?>
      </tr>
      <?php $i++; } ?></table><?php
+     mysqli_free_result($result);
 
      if(isset($_SESSION[$settings['session_prefix'].'user_type']) && $_SESSION[$settings['session_prefix'].'user_type']=='admin')
       {

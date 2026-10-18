@@ -73,32 +73,6 @@ if ($settings['remember_userstandard']  == 1 && !isset($_SESSION[$settings['sess
    mysqli_free_result($pid_result);
   }
 
-// Materialize the current page once, then fetch counts/last replies in batches.
-$topics = array();
-$topics_loaded = false;
-if (isset($result) && $result instanceof mysqli_result) {
-    $topics_loaded = true;
-    while ($topic_row = mysqli_fetch_assoc($result)) $topics[] = $topic_row;
-    mysqli_free_result($result);
-    $topic_ids = array();
-    $topic_user_ids = array();
-    foreach ($topics as $topic_row) {
-        $topic_ids[] = (int)$topic_row['tid'];
-        if ((int)$topic_row['user_id'] > 0) $topic_user_ids[(int)$topic_row['user_id']] = (int)$topic_row['user_id'];
-    }
-    $topic_metadata = forum_fetch_topic_summary_metadata($topic_ids, !empty($settings['last_reply_link']) && $settings['last_reply_link'] == 1);
-    $reply_counts = $topic_metadata['counts'];
-    $last_replies = $topic_metadata['last_replies'];
-    $topic_user_types = array();
-    if ($settings['admin_mod_highlight'] == 1 && $topic_user_ids) {
-        $user_ids_sql = implode(',', array_values($topic_user_ids));
-        $userdata_result = mysqli_query($connid, "SELECT user_id, user_type FROM ". $db_settings['userdata_table'] ." WHERE user_id IN (". $user_ids_sql .")");
-        if (!$userdata_result) die($lang['db_error']);
-        while ($userdata_row = mysqli_fetch_assoc($userdata_result)) $topic_user_types[(int)$userdata_row['user_id']] = $userdata_row['user_type'];
-        mysqli_free_result($userdata_result);
-    }
-}
-
 $subnav_1='<a class="textlink" href="posting.php?view=board&amp;category='.$category.'" title="'.$lang['new_entry_linktitle'].'">'.$lang['new_entry_linkname'].'</a>';
 $subnav_2 = '';
 if (isset($_SESSION[$settings['session_prefix'].'user_id'])) $subnav_2 .= '<a href="index.php?update=1&amp;view=board&amp;category='.$category.'"><img src="img/update.gif" alt="" title="'.$lang['update_time_linktitle'].'" width="9" height="9" onmouseover="this.src=\'img/update_mo.gif\';" onmouseout="this.src=\'img/update.gif\';" /></a>';
@@ -125,7 +99,7 @@ if ($categories!=false && $categories != "not accessible")
 
 parse_template();
 echo $header;
-if($thread_count > 0 && $topics_loaded)
+if($thread_count > 0 && isset($result))
  {
   ?><table class="normaltab" cellspacing="1" cellpadding="5">
   <tr>
@@ -143,21 +117,33 @@ if($thread_count > 0 && $topics_loaded)
   </tr>
   <?php
   $i=0;
-  foreach ($topics as $zeile) {
-  // Counts include the root post, so subtract one to show replies only.
-  $answers_count = max(0, (isset($reply_counts[(int)$zeile['tid']]) ? $reply_counts[(int)$zeile['tid']] : 1) - 1);
-  if ($settings['last_reply_link'] == 1) {
-      $last_answer = isset($last_replies[(int)$zeile['tid']]) ? $last_replies[(int)$zeile['tid']] : array('id' => (int)$zeile['id'], 'name' => $zeile['name']);
+  while ($zeile = mysqli_fetch_assoc($result)) {
+  // count replies:
+  $pid_resultc = mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['forum_table'] ." WHERE tid = ". intval($zeile["tid"]));
+  list($answers_count) = mysqli_fetch_row($pid_resultc);
+  $answers_count = $answers_count - 1;
+  mysqli_free_result($pid_resultc);
+
+  // data for link to last reply:
+  if ($settings['last_reply_link'] == 1)
+  {
+   $last_answer_result = mysqli_query($connid, "SELECT name, id FROM ". $db_settings['forum_table'] ." WHERE tid = ". intval($zeile["tid"]) ." ORDER BY time DESC LIMIT 1");
+   $last_answer = mysqli_fetch_assoc($last_answer_result);
+   mysqli_free_result($last_answer_result);
   }
 
-  // User types for this page were loaded in one query above.
+  // highlight mods and admins:
   $mark_admin = false;
   $mark_mod = false;
-  if ($settings['admin_mod_highlight'] == 1 && (int)$zeile['user_id'] > 0) {
-      $topic_user_type = isset($topic_user_types[(int)$zeile['user_id']]) ? $topic_user_types[(int)$zeile['user_id']] : '';
-      if ($topic_user_type === 'admin') $mark_admin = true;
-      elseif ($topic_user_type === 'mod') $mark_mod = true;
-  }
+  if ($settings['admin_mod_highlight'] == 1 && $zeile["user_id"] > 0)
+   {
+    $userdata_result=mysqli_query($connid, "SELECT user_type FROM ". $db_settings['userdata_table'] ." WHERE user_id = ". intval($zeile["user_id"]));
+    if (!$userdata_result) die($lang['db_error']);
+    $userdata = mysqli_fetch_assoc($userdata_result);
+    mysqli_free_result($userdata_result);
+    if ($userdata['user_type'] == "admin") $mark_admin = true;
+    elseif ($userdata['user_type'] == "mod") $mark_mod = true;
+   }
   ?>
   <tr>
   <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><?php
@@ -197,6 +183,7 @@ if($thread_count > 0 && $topics_loaded)
    <?php $i++;
    }
   ?></table><?php
+  mysqli_free_result($result);
   if(isset($_SESSION[$settings['session_prefix'].'user_type']) && $_SESSION[$settings['session_prefix'].'user_type']=='admin')
    {
     ?><p class="marked-threads-board"><img src="img/marked.gif" alt="[x]" width="9" height="9" /> <?php echo $lang['marked_threads_actions']; ?> <a href="admin.php?action=delete_marked_threads&amp;refer=board"><?php echo $lang['delete_marked_threads']; ?></a> - <a href="admin.php?action=lock_marked_threads&amp;refer=board"><?php echo $lang['lock_marked_threads']; ?></a> - <a href="admin.php?action=unlock_marked_threads&amp;refer=board"><?php echo $lang['unlock_marked_threads']; ?></a> - <a href="admin.php?action=unmark&amp;refer=board"><?php echo $lang['unmark_threads']; ?></a> - <a href="admin.php?action=invert_markings&amp;refer=board"><?php echo $lang['invert_markings']; ?></a> - <a href="admin.php?action=mark_threads&amp;refer=board"><?php echo $lang['mark_threads']; ?></a></p><?php

@@ -75,8 +75,7 @@ $lock_result = mysqli_query($connid, "SELECT user_lock FROM ". $db_settings['use
 if (!$lock_result) die($lang['db_error']);
 $lock_result_array = mysqli_fetch_assoc($lock_result);
 mysqli_free_result($lock_result);
-if (!is_array($lock_result_array) || !isset($lock_result_array['user_lock'])) { session_destroy(); header('Location: login.php'); exit; }
-if ((int)$lock_result_array['user_lock'] > 0) $action = "locked";
+if ($lock_result_array['user_lock'] > 0) $action = "locked";
 
 if (isset($_GET['user_lock']) && isset($_SESSION[$settings['session_prefix'].'user_type']) && ($_SESSION[$settings['session_prefix'].'user_type'] == "admin" || $_SESSION[$settings['session_prefix'].'user_type'] == "mod"))
  {
@@ -84,7 +83,7 @@ if (isset($_GET['user_lock']) && isset($_SESSION[$settings['session_prefix'].'us
   if (!$lock_result) die($lang['db_error']);
   $field = mysqli_fetch_assoc($lock_result);
   mysqli_free_result($lock_result);
-  if (is_array($field) && ($field['user_type'] ?? '') == "user")
+  if ($field['user_type'] == "user")
    {
     $new_lock = ($field['user_lock'] == 0) ? 1 : 0;
     $update_result = mysqli_query($connid, "UPDATE ". $db_settings['userdata_table'] ." SET user_lock=". intval($new_lock) .", last_login=last_login, registered=registered WHERE user_id=". intval($_GET['user_lock']) ." LIMIT 1");
@@ -99,9 +98,8 @@ if(isset($_POST['change_email_submit']))
     // Check data:
     $email_result = mysqli_query($connid, "SELECT user_id, user_name, user_pw, user_email FROM ". $db_settings['userdata_table'] ." WHERE user_id = ". intval($user_id) ." LIMIT 1");
     if (!$email_result) die($lang['db_error']);
-    $field = mysqli_fetch_assoc($email_result) ?: array('user_id' => 0, 'user_name' => '', 'user_pw' => '', 'user_email' => '');
+    $field = mysqli_fetch_assoc($email_result);
     mysqli_free_result($email_result);
-    if ($field['user_id'] < 1) $errors[] = $lang['error_form_uncompl'];
     if ($pw_new_email=='' || $new_email=='') $errors[] = $lang['error_form_uncompl'];
     if (empty($errors))
      {
@@ -214,7 +212,7 @@ elseif (isset($_SESSION[$settings['session_prefix'].'user_id']) && isset($action
    case "pw submited":
     $pw_result = mysqli_query($connid, "SELECT user_pw FROM ". $db_settings['userdata_table'] ." WHERE user_id = ". intval($user_id) ." LIMIT 1");
     if (!$pw_result) die($lang['db_error']);
-    $field = mysqli_fetch_assoc($pw_result) ?: array('user_pw' => '');
+    $field = mysqli_fetch_assoc($pw_result);
     mysqli_free_result($pw_result);
 
     trim($old_pw);
@@ -264,15 +262,14 @@ elseif (isset($_SESSION[$settings['session_prefix'].'user_id']) && isset($action
     if (!$pms_result) die($lang['db_error']);
     $sender = mysqli_fetch_assoc($pms_result);
     mysqli_free_result($pms_result);
-    if (!is_array($sender) || !isset($sender['user_name'], $sender['user_email'])) { session_destroy(); header('Location: login.php'); exit; }
 
     $pmr_result = mysqli_query($connid, "SELECT user_name, user_email, personal_messages FROM ". $db_settings['userdata_table'] ." WHERE user_id = ". intval($_POST['recipient_id']) ." LIMIT 1");
     if (!$pmr_result) die($lang['db_error']);
-    $recipient = mysqli_fetch_assoc($pmr_result) ?: array('user_name' => '', 'user_email' => '', 'personal_messages' => '');
+    $recipient = mysqli_fetch_assoc($pmr_result);
     mysqli_free_result($pmr_result);
 
     if ($_POST['pm_text'] == "") $errors[] = $lang['error_pers_msg_no_text'];
-    if (($recipient['personal_messages'] ?? '') == "") $errors[] = $lang['error_pers_msg_deactivated'];
+    if ($recipient['personal_messages'] == "") $errors[] = $lang['error_pers_msg_deactivated'];
 
     if (empty($errors))
      {
@@ -417,7 +414,6 @@ switch ($action)
    if (!$result) die($lang['db_error']);
    $field = mysqli_fetch_assoc($result);
    mysqli_free_result($result);
-   if (!is_array($field) || !isset($field['user_name'])) { header('Location: user.php'); exit; }
    // count postings:
    $count_postings_result = mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['forum_table'] ." WHERE user_id = ". intval($id));
    list($postings_count) = mysqli_fetch_row($count_postings_result);
@@ -578,7 +574,6 @@ switch ($action)
    if (!$result) die($lang['db_error']);
    $field = mysqli_fetch_assoc($result);
    mysqli_free_result($result);
-   if (!is_array($field)) { session_destroy(); header('Location: login.php'); exit; }
 
    if (empty($userdata_submit))
     {
@@ -734,7 +729,6 @@ switch ($action)
    if (!$pma_result) die($lang['db_error']);
    $field = mysqli_fetch_assoc($pma_result);
    mysqli_free_result($pma_result);
-   if (!is_array($field) || !isset($field['user_name'])) { header('Location: user.php'); exit; }
 
    $lang['pers_msg_hl'] = str_replace("[name]", htmlsc($field["user_name"]), $lang['pers_msg_hl']);
    ?><h2><?php echo $lang['pers_msg_hl']; ?></h2><?php

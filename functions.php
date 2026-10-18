@@ -54,35 +54,36 @@ function get_settings() {
 
 function get_categories()
  {
-  global $lang, $settings, $connid, $db_settings, $category_accession;
+  global $lang, $settings, $connid, $db_settings;
 
-  $result = mysqli_query($connid, "SELECT id, category, accession FROM ".$db_settings['category_table']." ORDER BY category_order ASC");
-  if (!$result) die($lang['db_error']);
+  $count_result = mysqli_query($connid, "SELECT COUNT(*) FROM ".$db_settings['category_table']);
+  list($category_count) = mysqli_fetch_row($count_result);
+  mysqli_free_result($count_result);
 
-  $categories = array(0 => '');
-  $category_accession = array();
-  $category_count = 0;
-  $session_prefix = isset($settings['session_prefix']) ? $settings['session_prefix'] : '';
-  $user_id = isset($_SESSION[$session_prefix.'user_id']) ? $_SESSION[$session_prefix.'user_id'] : null;
-  $user_type = isset($_SESSION[$session_prefix.'user_type']) ? $_SESSION[$session_prefix.'user_type'] : '';
-  if (empty($user_id)) $allowed_accessions = array(0);
-  elseif ($user_type === 'user') $allowed_accessions = array(0, 1);
-  elseif ($user_type === 'mod' || $user_type === 'admin') $allowed_accessions = array(0, 1, 2);
-  else $allowed_accessions = array();
-
-  while ($line = mysqli_fetch_assoc($result)) {
-      $category_count++;
-      $category_id = (int)$line['id'];
-      $accession = (int)$line['accession'];
-      $category_accession[$category_id] = $accession;
-      if (in_array($accession, $allowed_accessions, true)) {
-          $categories[$category_id] = $line['category'];
-      }
-  }
-  mysqli_free_result($result);
-
-  if ($category_count > 0) return $categories;
-  return false;
+  if ($category_count > 0)
+   {
+    if (empty($_SESSION[$settings['session_prefix'].'user_id']))
+     {
+      $result = mysqli_query($connid, "SELECT id, category FROM ".$db_settings['category_table']." WHERE accession = 0 ORDER BY category_order ASC");
+     }
+    elseif (isset($_SESSION[$settings['session_prefix'].'user_id']) && isset($_SESSION[$settings['session_prefix'].'user_type']) && $_SESSION[$settings['session_prefix'].'user_type'] == "user")
+     {
+      $result = mysqli_query($connid, "SELECT id, category FROM ".$db_settings['category_table']." WHERE accession = 0 OR accession = 1 ORDER BY category_order ASC");
+     }
+    elseif (isset($_SESSION[$settings['session_prefix'].'user_id']) && isset($_SESSION[$settings['session_prefix'].'user_type']) && ($_SESSION[$settings['session_prefix'].'user_type'] == "mod" || $_SESSION[$settings['session_prefix'].'user_type'] == "admin"))
+     {
+      $result = mysqli_query($connid, "SELECT id, category FROM ".$db_settings['category_table']." WHERE accession = 0 OR accession = 1 OR accession = 2 ORDER BY category_order ASC");
+     }
+    if(!$result) die($lang['db_error']);
+    $categories[0]='';
+    while ($line = mysqli_fetch_assoc($result))
+     {
+      $categories[$line['id']] = $line['category'];
+     }
+    mysqli_free_result($result);
+    return $categories;
+   }
+  else return false;
  }
 
 function get_category_ids($categories)
@@ -100,19 +101,14 @@ function get_category_ids($categories)
 
 function category_accession()
  {
-  global $settings, $lang, $connid, $db_settings, $category_accession;
-  if (isset($category_accession) && is_array($category_accession)) {
-      return count($category_accession) ? $category_accession : false;
-  }
+  global $settings, $lang, $connid, $db_settings;
   $result = mysqli_query($connid, "SELECT id, accession FROM ".$db_settings['category_table']);
-  if (!$result) die($lang['db_error']);
-  $category_accession = array();
-  while ($line = mysqli_fetch_assoc($result)) {
-      $category_accession[(int)$line['id']] = (int)$line['accession'];
-  }
+  while ($line = mysqli_fetch_assoc($result))
+   {
+    $category_accession[$line['id']] = $line['accession'];
+   }
   mysqli_free_result($result);
-  if (count($category_accession)) return $category_accession;
-  return false;
+  if (isset($category_accession)) return $category_accession; else return false;
  }
 
 function nav($page, $entries_per_page, $entry_count, $order, $descasc, $category, $action="") // Seiten-Navigation für forum.php, board.php und mix.php
@@ -185,49 +181,6 @@ function forum_safe_sort_direction($candidate, $default = 'ASC') {
     if (!is_string($candidate)) return $default;
     $candidate = strtoupper($candidate);
     return ($candidate === 'ASC' || $candidate === 'DESC') ? $candidate : $default;
-}
-
-/**
- * Fetch reply totals and (optionally) last-reply links for a page of topics.
- * This replaces per-topic queries on listing pages with at most two batched
- * queries. Topic IDs are normalized to integers before entering an IN clause.
- */
-function forum_fetch_topic_summary_metadata($topic_ids, $include_last_reply = false) {
-    global $connid, $db_settings, $lang;
-
-    $ids = array();
-    foreach ((array)$topic_ids as $topic_id) {
-        if (is_scalar($topic_id) && preg_match('/\A[0-9]{1,10}\z/', (string)$topic_id)) {
-            $topic_id = (int)$topic_id;
-            if ($topic_id > 0) $ids[$topic_id] = $topic_id;
-        }
-    }
-    $ids = array_values($ids);
-    $metadata = array('counts' => array(), 'last_replies' => array());
-    if (!$ids) return $metadata;
-
-    $ids_sql = implode(',', $ids);
-    $count_result = mysqli_query($connid, "SELECT tid, COUNT(*) AS posting_count FROM ". $db_settings['forum_table'] ." WHERE tid IN (". $ids_sql .") GROUP BY tid");
-    if (!$count_result) die($lang['db_error']);
-    while ($row = mysqli_fetch_assoc($count_result)) {
-        $metadata['counts'][(int)$row['tid']] = (int)$row['posting_count'];
-    }
-    mysqli_free_result($count_result);
-
-    if ($include_last_reply) {
-        // Equal-second timestamps are resolved consistently by highest entry ID.
-        $last_result = mysqli_query($connid, "SELECT e.tid, e.id, e.name FROM ". $db_settings['forum_table'] ." AS e INNER JOIN (SELECT tid, MAX(time) AS latest_time FROM ". $db_settings['forum_table'] ." WHERE tid IN (". $ids_sql .") GROUP BY tid) AS latest ON latest.tid = e.tid AND latest.latest_time = e.time WHERE e.tid IN (". $ids_sql .") ORDER BY e.tid ASC, e.id DESC");
-        if (!$last_result) die($lang['db_error']);
-        while ($row = mysqli_fetch_assoc($last_result)) {
-            $tid = (int)$row['tid'];
-            if (!isset($metadata['last_replies'][$tid])) {
-                $metadata['last_replies'][$tid] = array('id' => (int)$row['id'], 'name' => $row['name']);
-            }
-        }
-        mysqli_free_result($last_result);
-    }
-
-    return $metadata;
 }
 
 function forum_safe_link_target($raw_url) {
@@ -408,12 +361,9 @@ function zitat($string)
 // connects to the database:
 function connect_db($host,$user,$pw,$db) {
 	global $lang;
-	// Keep the legacy application's checked-false error handling predictable
-	// on PHP 8.1+, where mysqli defaults to throwing exceptions.
-	mysqli_report(MYSQLI_REPORT_OFF);
-	$connid = @mysqli_connect($host, $user, $pw, $db);
+	$connid = @mysqli_connect($host, $user, $pw, $db);  // open database connection
 	if (!$connid) die($lang['db_error']);
-	if (!mysqli_set_charset($connid, "utf8mb4")) die($lang['db_error']);
+	mysqli_set_charset($connid, "utf8mb4");
 	return $connid;
 }
 
@@ -427,13 +377,7 @@ function user_online()
   if (isset($_SESSION[$settings['session_prefix'].'user_id'])) $ip = "uid_".$_SESSION[$settings['session_prefix'].'user_id'];
   else $ip = $_SERVER['REMOTE_ADDR'];
   @mysqli_query($connid, "DELETE FROM ". $db_settings['useronline_table'] ." WHERE time < ". intval($diff));
-  $online_result = @mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['useronline_table'] ." WHERE ip= '". mysqli_real_escape_string($connid, $ip) ."'");
-  $is_online = 0;
-  if ($online_result) {
-   $online_row = mysqli_fetch_row($online_result);
-   mysqli_free_result($online_result);
-   if (is_array($online_row) && isset($online_row[0])) $is_online = (int)$online_row[0];
-  }
+  list($is_online) = @mysqli_fetch_row(@mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['useronline_table'] ." WHERE ip= '". mysqli_real_escape_string($connid, $ip) ."'"));
   if ($is_online > 0) @mysqli_query($connid, "UPDATE ". $db_settings['useronline_table'] ." SET time='".time()."', user_id='". intval($user_id) ."' WHERE ip='". mysqli_real_escape_string($connid, $ip) ."'");
   else @mysqli_query($connid, "INSERT INTO ". $db_settings['useronline_table'] ." SET time='". time() ."', ip='". mysqli_real_escape_string($connid, $ip) ."', user_id=". intval($user_id));
   #return $user_online;

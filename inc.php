@@ -151,39 +151,39 @@ if(empty($category)) $category=0;
 
 if (isset($_SESSION[$settings['session_prefix'].'user_id'])) $category_accession = category_accession();
 
-// Count postings and threads in one aggregate query; category IDs were normalized
-// by get_category_ids() before being added to the query.
-if ($categories === false || is_array($categories)) {
-    $category_filter = '';
-    if (is_array($categories)) {
-        $category_filter = " WHERE category IN (".$category_ids_query.")";
-    }
-    $count_result = mysqli_query($connid, "SELECT COUNT(*) AS posting_count, COALESCE(SUM(CASE WHEN pid = 0 THEN 1 ELSE 0 END), 0) AS thread_count FROM ".$db_settings['forum_table'].$category_filter);
-    if (!$count_result) die($lang['db_error']);
-    list($posting_count, $thread_count) = mysqli_fetch_row($count_result);
-    mysqli_free_result($count_result);
-    $posting_count = (int)$posting_count;
-    $thread_count = (int)$thread_count;
-} else {
-    $thread_count = 0;
-    $posting_count = 0;
-}
+// count postings, threads, users and users online:
+if ($categories == false) // no categories defined
+  {
+   $count_result = mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['forum_table'] ." WHERE pid = 0");
+   list($thread_count) = mysqli_fetch_row($count_result);
+   mysqli_free_result($count_result);
+   $count_result = mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['forum_table']);
+   list($posting_count) = mysqli_fetch_row($count_result);
+   mysqli_free_result($count_result);
+  }
+ elseif (is_array($categories)) // there are categories
+  {
+   $count_result = mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['forum_table'] ." WHERE pid = 0 AND category IN (". $category_ids_query .")");
+   list($thread_count) = mysqli_fetch_row($count_result);
+   mysqli_free_result($count_result);
+   $count_result = mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['forum_table'] ." WHERE category IN (". $category_ids_query .")");
+   list($posting_count) = mysqli_fetch_row($count_result);
+   mysqli_free_result($count_result);
+  }
+else { $thread_count = 0; $posting_count = 0; }
 
-$count_result = mysqli_query($connid, "SELECT COUNT(*) FROM ".$db_settings['userdata_table']);
-if (!$count_result) die($lang['db_error']);
+$count_result = mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['userdata_table']);
 list($user_count) = mysqli_fetch_row($count_result);
-mysqli_free_result($count_result);
-$user_count = (int)$user_count;
 
 if ($settings['count_users_online'] > 0)
  {
   user_online();
-  $count_result = mysqli_query($connid, "SELECT COALESCE(SUM(CASE WHEN user_id > 0 THEN 1 ELSE 0 END), 0) AS registered_online, COALESCE(SUM(CASE WHEN user_id = 0 THEN 1 ELSE 0 END), 0) AS guests_online FROM ".$db_settings['useronline_table']);
-  if (!$count_result) die($lang['db_error']);
-  list($useronline_count, $guestsonline_count) = mysqli_fetch_row($count_result);
-  mysqli_free_result($count_result);
-  $useronline_count = (int)$useronline_count;
-  $guestsonline_count = (int)$guestsonline_count;
+  $count_result = mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['useronline_table'] ." WHERE user_id > 0");
+  list($useronline_count) = mysqli_fetch_row($count_result);
+  if ($settings['count_users_online'] != 2) {
+   $count_result = mysqli_query($connid, "SELECT COUNT(*) FROM ". $db_settings['useronline_table'] ." WHERE user_id = 0");
+   list($guestsonline_count) = mysqli_fetch_row($count_result);
+  }
   if ($settings['count_users_online'] != 2) $counter = $lang['counter_uo'];
   else $counter = $lang['counter_uo_ng'];
   $counter = str_replace("[postings]", $posting_count, $counter);
@@ -200,7 +200,8 @@ else
   $counter = str_replace("[postings]", $posting_count, $counter);
   $counter = str_replace("[threads]", $thread_count, $counter);
   $counter = str_replace("[users]", $user_count, $counter);
-}
+ }
+mysqli_free_result($count_result);
 
 // Cast all timezone offsets before they are interpolated into SQL INTERVAL expressions.
 // The cookie is user-controlled and must never be concatenated into a query as-is.

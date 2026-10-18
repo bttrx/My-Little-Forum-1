@@ -197,7 +197,7 @@ if(isset($_POST['sql_submit']))
 
   $pw_result = mysqli_query($connid, "SELECT user_pw FROM ". $db_settings['userdata_table'] ." WHERE user_id = ". intval($_SESSION[$settings['session_prefix'].'user_id']) ." LIMIT 1");
   if (!$pw_result) die($lang['db_error']);
-  $field = mysqli_fetch_assoc($pw_result) ?: array('user_pw' => '');
+  $field = mysqli_fetch_assoc($pw_result);
   mysqli_free_result($pw_result);
   if ($_POST['sql_pw']=='') $errors[] = $lang['error_form_uncompl'];
   else
@@ -601,7 +601,7 @@ if (isset($_POST['delete_all_postings_confirmed']))
  {
   $pw_result = mysqli_query($connid, "SELECT user_pw FROM ". $db_settings['userdata_table'] ." WHERE user_id = ". intval($_SESSION[$settings['session_prefix'].'user_id']) ." LIMIT 1");
   if (!$pw_result) die($lang['db_error']);
-  $field = mysqli_fetch_assoc($pw_result) ?: array('user_pw' => '');
+  $field = mysqli_fetch_assoc($pw_result);
   mysqli_free_result($pw_result);
   if ($_POST['delete_all_postings_confirm_pw']=="") $errors[] = $lang['error_form_uncompl'];
   else
@@ -621,7 +621,7 @@ if (isset($_POST['delete_db_confirmed']))
  {
   $pw_result = mysqli_query($connid, "SELECT user_pw FROM ". $db_settings['userdata_table'] ." WHERE user_id = ". intval($_SESSION[$settings['session_prefix'].'user_id']) ." LIMIT 1");
   if (!$pw_result) die($lang['db_error']);
-  $field = mysqli_fetch_assoc($pw_result) ?: array('user_pw' => '');
+  $field = mysqli_fetch_assoc($pw_result);
   mysqli_free_result($pw_result);
   if ($_POST['delete_db_confirm_pw']=="" || empty($_POST['delete_modus'])) $errors[] = $lang['error_form_uncompl'];
   else

@@ -69,7 +69,7 @@ $settings['upload_max_img_height'] = 600;
 $settings['mail_parameter'] = "";
 $settings['forum_disabled'] = 0;
 $settings['session_prefix'] = "mlf_";
-$settings['version'] = '1.7.12';
+$settings['version'] = '1.7.11';
 $settings['captcha_posting'] = 0;
 $settings['captcha_contact'] = 0;
 $settings['captcha_register'] = 0;
@@ -286,7 +286,7 @@ function update17() {
 	@mysqli_query($connid, "ALTER TABLE ". $db_settings['forum_table'] ." CHANGE time time timestamp NULL default NULL, CHANGE last_answer last_answer timestamp NULL default NULL, CHANGE edited edited timestamp NULL default NULL") or $errors[] = $lang_add['alter_table_error']. " (MySQL: ".mysqli_error($connid).")";
 	@mysqli_query($connid, "ALTER TABLE ". $db_settings['userdata_table'] ." CHANGE last_login last_login timestamp NULL default NULL, CHANGE last_logout last_logout timestamp NULL default NULL, CHANGE registered registered timestamp NULL default NULL") or $errors[] = $lang_add['alter_table_error']. " (MySQL: ".mysqli_error($connid).")";
 	@mysqli_query($connid, "ALTER TABLE ". $db_settings['smilies_table'] ." CHANGE file file varchar(100) NOT NULL default '', CHANGE title title varchar(255) NOT NULL default ''") or $errors[] = $lang_add['alter_table_error']. " (MySQL: ".mysqli_error($connid).")";
-	@mysqli_query($connid, "UPDATE ". $db_settings['settings_table'] ." SET value='1.7.12' WHERE name = 'version'") or $errors[] = $lang_add['update_error']. " (MySQL: ".mysqli_error($connid).")";
+	@mysqli_query($connid, "UPDATE ". $db_settings['settings_table'] ." SET value='1.7.11' WHERE name = 'version'") or $errors[] = $lang_add['update_error']. " (MySQL: ".mysqli_error($connid).")";
 	if (isset($errors)) return $errors;
 	return false;
 }
@@ -404,9 +404,11 @@ if (isset($_POST['form_submitted']))
      fixed tinyint(4) default '0',
      views int(11) default '0',
      PRIMARY KEY (id),
-     KEY tid_time (tid, time),
-     KEY category_pid_fixed_last_answer (category, pid, fixed, last_answer),
-     KEY pid_fixed_last_answer (pid, fixed, last_answer))";
+     UNIQUE KEY id (id),
+     KEY tid (tid),
+     KEY category (category),
+     KEY pid (pid),
+     KEY fixed (fixed))";
      $tabledef['categories'] = "CREATE TABLE ". $db_settings['category_table'] ." (
      id int(11) NOT NULL auto_increment,
      category_order int(11) NOT NULL,
@@ -457,10 +459,7 @@ if (isset($_POST['form_submitted']))
      $tabledef['uonline'] = "CREATE TABLE ". $db_settings['useronline_table'] ." (
      ip char(15) NOT NULL default '',
      time int(14) NOT NULL default '0',
-     user_id int(11) default '0',
-     KEY time_idx (time),
-     KEY ip_idx (ip),
-     KEY user_id_idx (user_id))";
+     user_id int(11) default '0')";
      // create tables:
      if (empty($errors))
       {
