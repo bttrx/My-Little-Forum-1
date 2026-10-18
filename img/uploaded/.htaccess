@@ -1,0 +1,15 @@
+Options -Indexes -ExecCGI
+<IfModule mod_authz_core.c>
+  <FilesMatch "\.(?i:php[0-9]?|phtml|phar|cgi|pl|py|sh)$">
+    Require all denied
+  </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+  <FilesMatch "\.(?i:php[0-9]?|phtml|phar|cgi|pl|py|sh)$">
+    Order allow,deny
+    Deny from all
+  </FilesMatch>
+</IfModule>
+<IfModule mod_php.c>
+  php_flag engine off
+</IfModule>

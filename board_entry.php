@@ -23,9 +23,9 @@
 
 include("inc.php");
 
-if(count($_GET) > 0)
-foreach($_GET as $key => $value)
-$$key = $value;
+foreach ($_GET as $key => $value) {
+ if (forum_request_variable_allowed($key, $value)) $$key = $value;
+}
 
 function nav_b($be_page, $entries_per_page, $entry_count, $id, $da, $nr, $page, $category, $order, $descasc)
  {
@@ -78,7 +78,7 @@ if (!isset($_SESSION[$settings['session_prefix'].'user_id']) && isset($_COOKIE['
  if (empty($descasc)) $descasc="DESC";
  if (empty($category)) $category="all";
  if (empty($be_page)) $be_page = 0;
- if (empty($da)) $da="ASC";
+ $da = forum_safe_sort_direction(isset($da) ? $da : 'ASC', 'ASC');
  $ul = $be_page * $settings['answers_per_topic'];
 
  unset($entrydata);
@@ -91,7 +91,7 @@ if (!isset($_SESSION[$settings['session_prefix'].'user_id']) && isset($_COOKIE['
     {
      $result_t=mysqli_query($connid, "SELECT id, tid, pid, user_id, UNIX_TIMESTAMP(time + INTERVAL ". $time_difference ." HOUR) AS Uhrzeit,
                         UNIX_TIMESTAMP(time) AS time, UNIX_TIMESTAMP(edited + INTERVAL ". $time_difference ." HOUR) AS e_Uhrzeit,
-                        UNIX_TIMESTAMP(edited - INTERVAL ". $settings['edit_delay'] ." MINUTE) AS edited_diff, edited_by, user_id, name, email,
+                        UNIX_TIMESTAMP(edited - INTERVAL ". intval($settings['edit_delay']) ." MINUTE) AS edited_diff, edited_by, user_id, name, email,
                         subject, hp, place, text, show_signature, category, locked, ip FROM ". $db_settings['forum_table'] ." WHERE id = ". intval($id) ." LIMIT 1");
      $thread = mysqli_fetch_assoc($result_t);
      mysqli_free_result($result_t);
@@ -130,7 +130,7 @@ if (!isset($_SESSION[$settings['session_prefix'].'user_id']) && isset($_COOKIE['
       }
      $result=mysqli_query($connid, "SELECT id, tid, pid, user_id, UNIX_TIMESTAMP(time + INTERVAL ". $time_difference ." HOUR) AS Uhrzeit,
                         UNIX_TIMESTAMP(time) AS time, UNIX_TIMESTAMP(edited + INTERVAL ". $time_difference ." HOUR) AS e_Uhrzeit,
-                        UNIX_TIMESTAMP(edited - INTERVAL ". $settings['edit_delay'] ." MINUTE) AS edited_diff, edited_by, user_id, name, email,
+                        UNIX_TIMESTAMP(edited - INTERVAL ". intval($settings['edit_delay']) ." MINUTE) AS edited_diff, edited_by, user_id, name, email,
                         subject, hp, place, text, show_signature, category, locked, ip FROM ". $db_settings['forum_table'] ." WHERE tid = ". intval($id) ." AND id != ". intval($id) ." ORDER BY time ". $da ." LIMIT ". intval($ul) .", ". intval($settings['answers_per_topic']));
 
      $result_c = mysqli_query($connid, "SELECT tid FROM ". $db_settings['forum_table'] ." WHERE tid = ". intval($id) ." AND id != ". intval($id));
@@ -175,7 +175,7 @@ echo $header;
        }
        if (empty($thread["hide_email"])) $thread["hide_email"] = 0;
        if (($thread["email"]!="" && $thread["hide_email"] != 1) or $thread["hp"]!="") { echo "<br />"; }
-       if ($thread["hp"]!="") { if (substr($thread["hp"],0,7) != "http://" && substr($thread["hp"],0,8) != "https://" && substr($thread["hp"],0,6) != "ftp://" && substr($thread["hp"],0,9) != "gopher://" && substr($thread["hp"],0,7) != "news://") $thread["hp"] = "http://".$thread["hp"]; echo "<a href=\"" . $thread["hp"] ."\" title=\"".htmlsc($thread["hp"])."\"><img src=\"img/homepage.gif\" alt=\"".$lang['homepage_alt']."\" width=\"13\" height=\"13\" /></a>"; }
+       if ($thread["hp"]!="") { $thread_hp = $thread["hp"]; if (substr($thread_hp,0,7) != "http://" && substr($thread_hp,0,8) != "https://" && substr($thread_hp,0,6) != "ftp://" && substr($thread_hp,0,9) != "gopher://" && substr($thread_hp,0,7) != "news://") $thread_hp = "http://".$thread_hp; $safe_thread_hp = forum_safe_link_target($thread_hp); if ($safe_thread_hp !== false) echo "<a href=\"" . $safe_thread_hp ."\" title=\"".htmlsc($thread_hp)."\"><img src=\"img/homepage.gif\" alt=\"".htmlsc($lang['homepage_alt'])."\" width=\"13\" height=\"13\" /></a>"; }
        if (($thread["email"]!="" && $thread["hide_email"] != 1) && $thread["hp"]!="") { echo "&nbsp;"; }
        #if ($thread["email"]!="" && $thread["hide_email"] != 1) { echo "<a href=\"mailto:" . $thread["email"] ."\" title=\"".htmlsc($thread["email"])."\"><img src=\"img/email.gif\" alt=\"".$lang['email_alt']."\" width=\"14\" height=\"10\" /></a>"; }
        if ($thread["email"]!="" && $thread["hide_email"] != 1 && isset($page) && isset($order) && isset($category)) { echo '<a href="contact.php?id='.$thread["id"].'&amp;page='.$page.'&amp;category='.$category.'&amp;order='.$order.'&amp;view=board"><img src="img/email.gif" alt="'.$lang['email_alt'].'" title="'.str_replace("[name]", htmlsc($thread["name"]), $lang['email_to_user_linktitle']).'" width="13" height="10" /></a>'; }
@@ -183,8 +183,8 @@ echo $header;
        if (($thread["email"]!="" && $thread["hide_email"] != 1) or $thread["hp"]!="") { echo "<br />"; }
        echo "<br />";
        if ($thread["place"]!="") { echo htmlsc($thread["place"]); echo ", <br />"; }
-       echo strftime($lang['time_format'],$thread["Uhrzeit"]);
-       if ($thread["edited_diff"] > 0 && $thread["edited_diff"] > $thread["time"] && $settings['show_if_edited'] == 1) { $board_em = str_replace("[name]", htmlsc($thread["edited_by"]), $lang['board_edited_marking']); $board_em = str_replace("[time]", strftime($lang['time_format'],$thread["e_Uhrzeit"]), $board_em); ?><br /><span class="xsmall"><?php echo $board_em; ?></span><?php }
+       echo forum_strftime($lang['time_format'],$thread["Uhrzeit"]);
+       if ($thread["edited_diff"] > 0 && $thread["edited_diff"] > $thread["time"] && $settings['show_if_edited'] == 1) { $board_em = str_replace("[name]", htmlsc($thread["edited_by"]), $lang['board_edited_marking']); $board_em = str_replace("[time]", forum_strftime($lang['time_format'],$thread["e_Uhrzeit"]), $board_em); ?><br /><span class="xsmall"><?php echo $board_em; ?></span><?php }
        if (isset($_SESSION[$settings['session_prefix'].'user_id']) && $_SESSION[$settings['session_prefix']."user_type"] == "admin" || isset($_SESSION[$settings['session_prefix'].'user_id']) && $_SESSION[$settings['session_prefix']."user_type"] == "mod") { ?><br /><br /><span class="xsmall"><?php echo $thread['ip']; ?></span><?php }
        if ($settings['user_edit'] == 1 && isset($_SESSION[$settings['session_prefix'].'user_id']) && $thread["user_id"] == $_SESSION[$settings['session_prefix']."user_id"] || isset($_SESSION[$settings['session_prefix'].'user_id']) && $_SESSION[$settings['session_prefix']."user_type"] == "admin" || isset($_SESSION[$settings['session_prefix'].'user_id']) && $_SESSION[$settings['session_prefix']."user_type"] == "mod") { ?><br /><br /><span class="small"><a href="posting.php?action=edit&amp;id=<?php echo $thread["id"]; ?>&amp;view=board&amp;back=<?php echo $thread["tid"]; ?>&amp;page=<?php echo $page; ?>&amp;order=<?php echo $order; ?>&amp;descasc=<?php echo $descasc; ?>&amp;category=<?php echo $category; ?>" title="<?php echo $lang['edit_linktitle']; ?>"><img src="img/edit.gif" alt="" width="15" height="10" /><?php echo $lang['edit_linkname']; ?></a></span><?php } if ($settings['user_delete'] == 1 && isset($_SESSION[$settings['session_prefix'].'user_id']) && $thread["user_id"] == $_SESSION[$settings['session_prefix']."user_id"] || isset($_SESSION[$settings['session_prefix'].'user_id']) && $_SESSION[$settings['session_prefix']."user_type"] == "admin" || isset($_SESSION[$settings['session_prefix'].'user_id']) && $_SESSION[$settings['session_prefix']."user_type"] == "mod") { ?><br /><span class="small"><a href="posting.php?action=delete&amp;id=<?php echo $thread["id"]; ?>&amp;back=<?php echo $thread["tid"]; ?>&amp;view=board&amp;page=<?php echo $page; ?>&amp;order=<?php echo $order; ?>&amp;descasc=<?php echo $descasc; ?>&amp;category=<?php echo $category; ?>" title="<?php echo $lang['delete_linktitle']; ?>"><img src="img/delete.gif" alt="" width="12" height="9" /><?php echo $lang['delete_linkname']; ?></a></span><?php }
        if (isset($_SESSION[$settings['session_prefix'].'user_id']) && $_SESSION[$settings['session_prefix']."user_type"] == "admin" || isset($_SESSION[$settings['session_prefix'].'user_id']) && $_SESSION[$settings['session_prefix']."user_type"] == "mod") { ?><br /><span class="small"><a href="posting.php?lock=true&amp;view=board&amp;id=<?php echo $thread["id"]; ?>&amp;page=<?php echo $page; ?>&amp;order=<?php echo $order; ?>&amp;descasc=<?php echo $descasc; ?>&amp;category=<?php echo $category; ?>" title="<?php if ($thread['locked'] == 0) echo $lang['lock_linktitle']; else echo $lang['unlock_linktitle']; ?>"><img src="img/lock.gif" alt="" width="12" height="12" /><?php if ($thread['locked'] == 0) echo $lang['lock_linkname']; else echo $lang['unlock_linkname']; ?></a></span><?php }
@@ -263,7 +263,7 @@ echo $header;
 
         if (empty($entrydata["hide_email"])) $entrydata["hide_email"] = 0;
         if (($entrydata["email"]!="" && $entrydata["hide_email"] != 1) or $entrydata["hp"]!="") { echo "<br />"; }
-        if ($entrydata["hp"]!="") { if (substr($entrydata["hp"],0,7) != "http://" && substr($entrydata["hp"],0,8) != "https://" && substr($entrydata["hp"],0,6) != "ftp://" && substr($entrydata["hp"],0,9) != "gopher://" && substr($entrydata["hp"],0,7) != "news://") $entrydata["hp"] = "http://".$entrydata["hp"]; echo "<a href=\"" . $entrydata["hp"] ."\" title=\"".htmlsc($entrydata["hp"])."\"><img src=\"img/homepage.gif\" alt=\"".$lang['homepage_alt']."\" width=\"13\" height=\"13\" /></a>"; }
+        if ($entrydata["hp"]!="") { $entry_hp = $entrydata["hp"]; if (substr($entry_hp,0,7) != "http://" && substr($entry_hp,0,8) != "https://" && substr($entry_hp,0,6) != "ftp://" && substr($entry_hp,0,9) != "gopher://" && substr($entry_hp,0,7) != "news://") $entry_hp = "http://".$entry_hp; $safe_entry_hp = forum_safe_link_target($entry_hp); if ($safe_entry_hp !== false) echo "<a href=\"" . $safe_entry_hp ."\" title=\"".htmlsc($entry_hp)."\"><img src=\"img/homepage.gif\" alt=\"".htmlsc($lang['homepage_alt'])."\" width=\"13\" height=\"13\" /></a>"; }
         if (($entrydata["email"]!="" && $entrydata["hide_email"] != 1) && $entrydata["hp"]!="") { echo "&nbsp;"; }
         #if ($entrydata["email"]!="" && $entrydata["hide_email"] != 1) { echo "<a href=\"mailto:" . $entrydata["email"] ."\"title=\"".htmlsc($entrydata["email"])."\"><img src=\"img/email.gif\" alt=\"".$lang['email_alt']."\" width=\"14\" height=\"10\" /></a>"; }
         if ($entrydata["email"]!="" && $entrydata["hide_email"] != 1 && isset($page) && isset($order) && isset($category)) { echo '<a href="contact.php?id='.$entrydata["id"].'&amp;page='.$page.'&amp;category='.$category.'&amp;order='.$order.'&amp;view=board"><img src="img/email.gif" alt="'.$lang['email_alt'].'" title="'.str_replace("[name]", htmlsc($entrydata["name"]), $lang['email_to_user_linktitle']).'" width="13" height="10" /></a>'; }
@@ -271,8 +271,8 @@ echo $header;
         if (($entrydata["email"]!="" && $entrydata["hide_email"] != 1) or $entrydata["hp"]!="") { echo "<br />"; }
         echo "<br />";
         if ($entrydata["place"]!="") { echo htmlsc($entrydata["place"]); echo ", <br />"; }
-        echo strftime($lang['time_format'],$entrydata["Uhrzeit"]); ?>
-        <?php if ($entrydata["edited_diff"] > 0 && $entrydata["edited_diff"] > $entrydata["time"] && $settings['show_if_edited'] == 1) { $board_em = str_replace("[name]", htmlsc($entrydata["edited_by"]), $lang['board_edited_marking']); $board_em = str_replace("[time]", strftime($lang['time_format'],$entrydata["e_Uhrzeit"]), $board_em); ?><br /><span class="xsmall"><?php echo $board_em; ?></span><?php } ?>
+        echo forum_strftime($lang['time_format'],$entrydata["Uhrzeit"]); ?>
+        <?php if ($entrydata["edited_diff"] > 0 && $entrydata["edited_diff"] > $entrydata["time"] && $settings['show_if_edited'] == 1) { $board_em = str_replace("[name]", htmlsc($entrydata["edited_by"]), $lang['board_edited_marking']); $board_em = str_replace("[time]", forum_strftime($lang['time_format'],$entrydata["e_Uhrzeit"]), $board_em); ?><br /><span class="xsmall"><?php echo $board_em; ?></span><?php } ?>
         <?php if (isset($_SESSION[$settings['session_prefix'].'user_id']) && $_SESSION[$settings['session_prefix']."user_type"] == "admin") { ?><br /><br /><span class="xsmall"><?php echo $entrydata['ip']; ?></span><?php } ?>
         <span class="xsmall"><br /><br /><!--<a href="<?php echo "#p".$entrydata["pid"]; ?>">-->@ <?php echo htmlsc($posting_a["name"]); ?><!--</a>--></span>
         <?php if ($settings['user_edit'] == 1 && isset($_SESSION[$settings['session_prefix'].'user_id']) && $entrydata["user_id"] == $_SESSION[$settings['session_prefix']."user_id"] || isset($_SESSION[$settings['session_prefix'].'user_id']) && $_SESSION[$settings['session_prefix']."user_type"] == "admin" || isset($_SESSION[$settings['session_prefix'].'user_id']) && $_SESSION[$settings['session_prefix']."user_type"] == "mod") { ?><br /><br /><span class="small"><a href="posting.php?action=edit&amp;id=<?php echo $entrydata["id"]; ?>&amp;view=board&amp;back=<?php echo $entrydata["tid"]; ?>&amp;page=<?php echo $page; ?>&amp;order=<?php echo $order; ?>&amp;descasc=<?php echo $descasc; ?>&amp;category=<?php echo $category; ?>" title="<?php echo $lang['edit_linktitle']; ?>"><img src="img/edit.gif" alt="" width="15" height="10" /><?php echo $lang['edit_linkname']; ?></a></span><?php } if ($settings['user_delete'] == 1 && isset($_SESSION[$settings['session_prefix'].'user_id']) && $entrydata["user_id"] == $_SESSION[$settings['session_prefix']."user_id"] || isset($_SESSION[$settings['session_prefix'].'user_id']) && $_SESSION[$settings['session_prefix']."user_type"] == "admin" || isset($_SESSION[$settings['session_prefix'].'user_id']) && $_SESSION[$settings['session_prefix']."user_type"] == "mod") { ?><br /><span class="small"><a href="posting.php?action=delete&amp;id=<?php echo $entrydata["id"]; ?>&amp;back=<?php echo $entrydata["tid"]; ?>&amp;view=board&amp;page=<?php echo $page; ?>&amp;order=<?php echo $order; ?>&amp;category=<?php echo $category; ?>" title="<?php echo $lang['delete_linktitle']; ?>"><img src="img/delete.gif" alt="" width="12" height="9"><?php echo $lang['delete_linkname']; ?></a></span><?php }

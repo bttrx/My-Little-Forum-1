@@ -23,9 +23,9 @@
 
 include("inc.php");
 
-if (count($_GET) > 0)
-foreach($_GET as $key => $value)
-$$key = $value;
+foreach ($_GET as $key => $value) {
+ if (forum_request_variable_allowed($key, $value)) $$key = $value;
+}
 
 if (!isset($_SESSION[$settings['session_prefix'].'user_id']) && isset($_COOKIE['auto_login']) && isset($settings['autologin']) && $settings['autologin'] == 1)
  {
@@ -36,15 +36,14 @@ if (!isset($_SESSION[$settings['session_prefix'].'user_id']) && isset($_COOKIE['
  if($settings['access_for_users_only']  == 1 && isset($_SESSION[$settings['session_prefix'].'user_name']) || $settings['access_for_users_only']  != 1)
 {
 
-if ($settings['remember_userstandard']  == 1 && !isset($_SESSION[$settings['session_prefix'].'newtime'])) { setcookie("user_view","board",time()+(3600*24*30)); }
+if ($settings['remember_userstandard']  == 1 && !isset($_SESSION[$settings['session_prefix'].'newtime'])) { forum_set_cookie("user_view", "board", time()+(3600*24*30)); }
 
  unset($zeile);
 
  if (empty($page)) $page = 0;
  if (empty($order)) $order="last_answer";
- if (empty($descasc)) $descasc="DESC";
- if (isset($descasc) && $descasc=="ASC") $descasc = "ASC";
- else $descasc = "DESC";
+ $order = forum_safe_sort_column($order, array('subject', 'category', 'name', 'time', 'last_answer'), 'last_answer');
+ $descasc = forum_safe_sort_direction(isset($descasc) ? $descasc : 'DESC', 'DESC');
  $ul = $page * $settings['topics_per_page'];
 
  // database request
@@ -87,7 +86,7 @@ if ($categories!=false && $categories != "not accessible")
   $subnav_2 .= '&nbsp;&nbsp;<form method="get" action="board.php" title="'.$lang['choose_category_formtitle'].'"><div style="display: inline;"><select class="kat" size="1" name="category" onchange="this.form.submit();">';
   if (isset($category) && $category==0) $subnav_2 .= '<option value="0" selected="selected">'.$lang['show_all_categories'].'</option>';
   else $subnav_2 .= '<option value="0">'.$lang['show_all_categories'].'</option>';
-  while(list($key, $val) = each($categories))
+  foreach ($categories as $key => $val)
    {
     if($key!=0)
      {
@@ -170,9 +169,9 @@ if($thread_count > 0 && isset($result))
     ?></a><?php
    } ?>
    </td>
-   <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><span class="small"><?php echo strftime($lang['time_format'],$zeile["xtime"]); ?></span></td>
+   <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><span class="small"><?php echo forum_strftime($lang['time_format'],$zeile["xtime"]); ?></span></td>
    <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><span class="small"><?php echo $answers_count; ?></span></td>
-   <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><span class="small"><?php if ($answers_count > 0) { if ($settings['last_reply_link']==1) { ?><a href="board_entry.php?id=<?php echo $zeile["tid"]; ?>&amp;be_page=<?php echo ceil($answers_count / $settings['answers_per_topic'])-1; ?>&amp;page=<?php echo $page; ?>&amp;category=<?php echo $category; ?>&amp;order=<?php echo $order; ?>&amp;descasc=<?php echo $descasc; ?>#p<?php echo $last_answer['id']; ?>" title="<?php echo str_replace("[name]", $last_answer['name'], $lang['last_reply_lt']); ?>"><?php } echo strftime($lang['time_format'],$zeile["la_time"]); if ($settings['last_reply_link']==1) { ?></a><?php } } else echo "&nbsp;"; ?></span></td>
+   <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><span class="small"><?php if ($answers_count > 0) { if ($settings['last_reply_link']==1) { ?><a href="board_entry.php?id=<?php echo $zeile["tid"]; ?>&amp;be_page=<?php echo ceil($answers_count / $settings['answers_per_topic'])-1; ?>&amp;page=<?php echo $page; ?>&amp;category=<?php echo $category; ?>&amp;order=<?php echo $order; ?>&amp;descasc=<?php echo $descasc; ?>#p<?php echo $last_answer['id']; ?>" title="<?php echo str_replace("[name]", htmlsc($last_answer['name']), $lang['last_reply_lt']); ?>"><?php } echo forum_strftime($lang['time_format'],$zeile["la_time"]); if ($settings['last_reply_link']==1) { ?></a><?php } } else echo "&nbsp;"; ?></span></td>
    <?php if ($settings['count_views'] == 1) { ?>
    <td class="<?php if($i % 2 == 0) echo "a"; else echo "b"; ?>"><span class="small"><?php echo $zeile['views']; ?></span></td>
    <?php }

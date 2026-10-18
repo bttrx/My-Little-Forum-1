@@ -24,9 +24,10 @@
 include("inc.php");
 include("lang/".$lang['additional_language_file']);
 
-if (isset($_POST['user_time_difference']))
+if (isset($_POST['user_time_difference']) && is_string($_POST['user_time_difference']) && preg_match('/\A-?\d{1,2}\z/', $_POST['user_time_difference']))
  {
-  setcookie("user_time_difference",$_POST['user_time_difference'],time()+(3600*24*30));
+  $timezone_offset = max(-24, min(24, (int)$_POST['user_time_difference']));
+  forum_set_cookie("user_time_difference", $timezone_offset, time()+(3600*24*30));
   header("location: index.php");
   die("<a href=\"forum.php\">further...</a>");
  }

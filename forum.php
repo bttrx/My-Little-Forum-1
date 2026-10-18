@@ -24,9 +24,9 @@
 include("inc.php");
 
 // import vars:
-if(count($_GET) > 0)
-foreach($_GET as $key => $value)
-$$key = $value;
+foreach ($_GET as $key => $value) {
+ if (forum_request_variable_allowed($key, $value)) $$key = $value;
+}
 
 // log in automatically if cookie is set
 if (!isset($_SESSION[$settings['session_prefix'].'user_id']) && isset($_COOKIE['auto_login']) && isset($settings['autologin']) && $settings['autologin'] == 1)
@@ -38,7 +38,7 @@ if (!isset($_SESSION[$settings['session_prefix'].'user_id']) && isset($_COOKIE['
 // go on if user has access:
 if ($settings['access_for_users_only'] == 1 && isset($_SESSION[$settings['session_prefix'].'user_name']) || $settings['access_for_users_only'] != 1)
  {
-  if ($settings['remember_userstandard'] == 1 && !isset($_SESSION[$settings['session_prefix'].'newtime'])) { setcookie("user_view","thread",time()+(3600*24*30)); }
+  if ($settings['remember_userstandard'] == 1 && !isset($_SESSION[$settings['session_prefix'].'newtime'])) { forum_set_cookie("user_view", "thread", time()+(3600*24*30)); }
   if (empty($page)) $page = 0;
   if (empty($order)) $order="time";
   if (isset($descasc) && $descasc=="ASC") { $descasc="DESC"; $page = 0; }
@@ -85,7 +85,7 @@ if ($settings['access_for_users_only'] == 1 && isset($_SESSION[$settings['sessio
     $subnav_2 .= '&nbsp;&nbsp;<form method="get" action="forum.php" title="'.$lang['choose_category_formtitle'].'"><div style="display: inline;"><select class="kat" size="1" name="category" onchange="this.form.submit();">';
     if (isset($category) && $category==0) $subnav_2 .= '<option value="0" selected="selected">'.$lang['show_all_categories'].'</option>';
     else $subnav_2 .= '<option value="0">'.$lang['show_all_categories'].'</option>';
-    while(list($key, $val) = each($categories))
+    foreach ($categories as $key => $val)
      {
       if($key!=0)
        {

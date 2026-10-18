@@ -22,20 +22,58 @@
 ###############################################################################
 
 #ini_set("session.use_trans_sid","0");
+// Harden session handling before starting the session (PHP 7.3+ / PHP 8+).
+ini_set('session.use_only_cookies', '1');
+ini_set('session.use_strict_mode', '1');
+$session_cookie_secure = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
+$session_cookie_path = str_replace('\\', '/', dirname(isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '/'));
+if ($session_cookie_path === '.' || $session_cookie_path === '/') $session_cookie_path = '/';
+else $session_cookie_path = rtrim($session_cookie_path, '/') . '/';
+session_set_cookie_params(array(
+    'lifetime' => 0,
+    'path' => $session_cookie_path,
+    'secure' => $session_cookie_secure,
+    'httponly' => true,
+    'samesite' => 'Lax'
+));
 session_start();
 
 include("db_settings.php");
 include("functions.php");
 
-# for details see: http://de.php.net/manual/en/security.magicquotes.disabling.php
-if (get_magic_quotes_gpc()) {
-	$_POST = array_map('stripslashes_deep', $_POST);
-	$_GET = array_map('stripslashes_deep', $_GET);
-	$_COOKIE = array_map('stripslashes_deep', $_COOKIE);
+// Per-session CSRF protection for POST forms and old state-changing GET links.
+if (!isset($_SESSION['_mlf_csrf_token']) || !is_string($_SESSION['_mlf_csrf_token'])) {
+    $_SESSION['_mlf_csrf_token'] = bin2hex(random_bytes(32));
 }
+$request_method = isset($_SERVER['REQUEST_METHOD']) ? strtoupper($_SERVER['REQUEST_METHOD']) : 'GET';
+if ($request_method === 'POST' && !forum_csrf_token_valid(isset($_POST['_mlf_csrf_token']) ? $_POST['_mlf_csrf_token'] : null)) {
+    http_response_code(403);
+    header('Content-Type: text/plain; charset=UTF-8');
+    exit('This form expired or its security token is invalid. Please reload the page and try again.');
+}
+ob_start('forum_inject_csrf_fields');
+
+# Magic quotes were removed in PHP 5.4; request values must not be unescaped globally.
 
 $connid = connect_db($db_settings['host'], $db_settings['user'], $db_settings['pw'], $db_settings['db']);
 $settings = get_settings();
+
+$current_page = basename(isset($_SERVER['PHP_SELF']) ? $_SERVER['PHP_SELF'] : '');
+$csrf_required_get = forum_csrf_request_requires_token($current_page, $_GET);
+// login.php treats a plain visit by an authenticated user as logout for legacy reasons.
+if ($current_page === 'login.php' && isset($_SESSION[$settings['session_prefix'].'user_id']) && !isset($_GET['action'])) $csrf_required_get = true;
+if ($csrf_required_get && !forum_csrf_token_valid(isset($_GET['_mlf_csrf_token']) ? $_GET['_mlf_csrf_token'] : null)) {
+    http_response_code(403);
+    header('Content-Type: text/plain; charset=UTF-8');
+    exit('This action expired or its security token is invalid. Reload the forum page and try again.');
+}
+
+if (!headers_sent()) {
+    header('X-Content-Type-Options: nosniff');
+    header('X-Frame-Options: SAMEORIGIN');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+    header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
+}
 include("lang/".$settings['language_file']);
 setlocale(LC_ALL, $lang['locale']);
 
@@ -44,7 +82,7 @@ if(basename($_SERVER['PHP_SELF'])!='login.php' && basename($_SERVER['PHP_SELF'])
   if(isset($_SESSION[$settings['session_prefix'].'user_type']) && $_SESSION[$settings['session_prefix'].'user_type'] != 'admin')
    {
     session_destroy();
-    setcookie("auto_login","",0);
+    forum_set_cookie("auto_login", "", 0);
    }
   header("location: info.php?info=1");
   die("<a href=\"info.php?info=1\">further...</a>");
@@ -77,7 +115,7 @@ if(isset($_SESSION[$settings['session_prefix'].'user_name']))
     if(in_array(strtolower($_SESSION[$settings['session_prefix'].'user_name']),$banned_users_array) && $_SESSION[$settings['session_prefix'].'user_type']!='admin')
      {
       session_destroy();
-      setcookie("auto_login","",0);
+      forum_set_cookie("auto_login", "", 0);
       header("location: login.php?msg=user_banned");
       die($lang['user_banned']);
      }
@@ -96,10 +134,10 @@ if (empty($_SESSION[$settings['session_prefix']."user_id"]) && $settings['rememb
      {
       $c_last_visit[0] = $c_last_visit[1];
       $c_last_visit[1] = time();
-      setcookie("last_visit",$c_last_visit[0].".".$c_last_visit[1],time()+(3600*24*30));
+      forum_set_cookie("last_visit", $c_last_visit[0].".".$c_last_visit[1], time()+(3600*24*30));
      }
    }
-  else setcookie("last_visit",time().".".time(),time()+(3600*24*30));
+  else forum_set_cookie("last_visit", time().".".time(), time()+(3600*24*30));
  }
 if (isset($c_last_visit)) $last_visit = $c_last_visit[0]; else $last_visit = time();
 
@@ -165,8 +203,15 @@ else
  }
 mysqli_free_result($count_result);
 
-if (isset($settings['time_difference'])) $time_difference = $settings['time_difference'];
-else $time_difference = 0;
-if (isset($_SESSION[$settings['session_prefix'].'user_time_difference'])) $time_difference = $_SESSION[$settings['session_prefix'].'user_time_difference']+$time_difference;
-elseif (isset($_COOKIE['user_time_difference'])) $time_difference = $_COOKIE['user_time_difference']+$time_difference;
+// Cast all timezone offsets before they are interpolated into SQL INTERVAL expressions.
+// The cookie is user-controlled and must never be concatenated into a query as-is.
+$base_time_difference = (isset($settings['time_difference']) && is_numeric($settings['time_difference'])) ? (int)$settings['time_difference'] : 0;
+$user_time_difference_offset = 0;
+if (isset($_SESSION[$settings['session_prefix'].'user_time_difference']) && is_scalar($_SESSION[$settings['session_prefix'].'user_time_difference']) && is_numeric($_SESSION[$settings['session_prefix'].'user_time_difference'])) {
+    $user_time_difference_offset = (int)$_SESSION[$settings['session_prefix'].'user_time_difference'];
+} elseif (isset($_COOKIE['user_time_difference']) && is_scalar($_COOKIE['user_time_difference']) && is_numeric($_COOKIE['user_time_difference'])) {
+    $user_time_difference_offset = (int)$_COOKIE['user_time_difference'];
+}
+$user_time_difference_offset = max(-24, min(24, $user_time_difference_offset));
+$time_difference = $base_time_difference + $user_time_difference_offset;
 ?>

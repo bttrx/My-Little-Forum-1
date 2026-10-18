@@ -32,7 +32,6 @@ function resize($uploaded_file, $file, $new_width, $new_height, $compression=80)
  {
   if(file_exists($file))
    {
-    @chmod($file, 0777);
     @unlink($file);
    }
 
@@ -59,7 +58,7 @@ function resize($uploaded_file, $file, $new_width, $new_height, $compression=80)
     $current_image=ImageCreateFromPNG($uploaded_file) or $error = true;
     if(empty($error)) $new_image=imagecreatetruecolor($new_width,$new_height) or $error = true;
     if(empty($error)) ImageCopyResized($new_image,$current_image,0,0,0,0,$new_width,$new_height,$image_info[0],$image_info[1]) or $error = true;
-    if(empty($error)) ImagePNG($new_image, $file) or $error = $true;
+    if(empty($error)) ImagePNG($new_image, $file) or $error = true;
    }
   }
   if(empty($error)) return true;
@@ -73,10 +72,18 @@ $lang['upload_exp'] = str_replace("[width]", $settings['upload_max_img_width'], 
 $lang['upload_exp'] = str_replace("[height]", $settings['upload_max_img_height'], $lang['upload_exp']);
 $lang['upload_exp'] = str_replace("[size]", $settings['upload_max_img_size'], $lang['upload_exp']);
 
-if (isset($_FILES['probe']) && $_FILES['probe']['size'] != 0 && !$_FILES['probe']['error'])
+if (isset($_FILES['probe']) && is_array($_FILES['probe']))
  {
+  if (!isset($_FILES['probe']['error']) || $_FILES['probe']['error'] !== UPLOAD_ERR_OK) {
+   $errors[] = str_replace('[maximum_file_size]', ini_get('upload_max_filesize'), $lang['upload_error_2']);
+   $action = 'upload';
+  } elseif (empty($_FILES['probe']['size'])) {
+   $errors[] = $lang['invalid_file_format'];
+   $action = 'upload';
+  } else {
   unset($errors);
-  $image_info = getimagesize($_FILES['probe']['tmp_name']);
+  $image_info = @getimagesize($_FILES['probe']['tmp_name']);
+  if (!is_dir($uploaded_images_path) || !is_writable($uploaded_images_path)) $errors[] = $lang['upload_error'];
 
   if(!is_array($image_info) || $image_info[2] != 1 && $image_info[2] != 2 && $image_info[2] != 3) $errors[] = $lang['invalid_file_format'];
 
@@ -111,7 +118,6 @@ if (isset($_FILES['probe']) && $_FILES['probe']['size'] != 0 && !$_FILES['probe'
        {
         if(file_exists($uploaded_images_path.$img_tmp_name))
          {
-          @chmod($uploaded_images_path.$img_tmp_name, 0777);
           @unlink($uploaded_images_path.$img_tmp_name);
          }
        }
@@ -154,17 +160,19 @@ if (isset($_FILES['probe']) && $_FILES['probe']['size'] != 0 && !$_FILES['probe'
     $action = 'uploaded';
    }
   else $action = 'upload';
+  }
  }
 
-if(empty($errors))
+if (isset($_GET['uploaded_image_selected']))
  {
-  if(isset($_FILES['probe']['error'])) $errors[] = str_replace('[maximum_file_size]',ini_get('upload_max_filesize'),$lang['upload_error_2']);
- }
-
-if(isset($_GET['uploaded_image_selected']))
- {
-  $filename = $_GET['uploaded_image_selected'];
-  $action = 'uploaded';
+  $candidate_filename = (string)$_GET['uploaded_image_selected'];
+  if (preg_match('/\Aimage[0-9]+\.(?:gif|jpg|png)\z/i', $candidate_filename) && is_file($uploaded_images_path.$candidate_filename)) {
+   $filename = $candidate_filename;
+   $action = 'uploaded';
+  } else {
+   $errors[] = $lang['invalid_file_format'];
+   $action = 'upload';
+  }
  }
 
 ?><html>
@@ -213,11 +221,11 @@ switch($action)
       ?><p><?php echo $lang['upload_successful']; ?></p><?php
      }
    }
-  ?><img src="img/uploaded/<?php echo $filename; ?>" alt="" height="100" border="1">
+  ?><img src="img/uploaded/<?php echo htmlsc($filename); ?>" alt="" height="100" border="1">
   <p><?php echo $lang['paste_image']; ?></p>
-  <p><button style="width:25px; height:25px;" title="<?php echo $lang['insert_image_normal']; ?>" onclick="opener.insert('[img]<?php echo $uploaded_images_path.$filename; ?>[/img]'); window.close()"><img src="img/img_normal.gif" alt="<?php echo $lang['insert_image_normal']; ?>" wifth="11" height="11" /></button>&nbsp;
-  <button style="width:25px; height:25px;" title="<?php echo $lang['insert_image_left']; ?>" onclick="opener.insert('[img|left]<?php echo $uploaded_images_path.$filename; ?>[/img]'); window.close()"><img src="img/img_left.gif" alt="<?php echo $lang['insert_image_left']; ?>" wifth="11" height="11" /></button>&nbsp;
-  <button style="width:25px; height:25px;" title="<?php echo $lang['insert_image_right']; ?>" onclick="opener.insert('[img|right]<?php echo $uploaded_images_path.$filename; ?>[/img]'); window.close()"><img src="img/img_right.gif" alt="<?php echo $lang['insert_image_right']; ?>" wifth="11" height="11" /></button></p><?php
+  <p><button style="width:25px; height:25px;" title="<?php echo $lang['insert_image_normal']; ?>" onclick="opener.insert('[img]<?php echo htmlsc($uploaded_images_path.$filename); ?>[/img]'); window.close()"><img src="img/img_normal.gif" alt="<?php echo $lang['insert_image_normal']; ?>" wifth="11" height="11" /></button>&nbsp;
+  <button style="width:25px; height:25px;" title="<?php echo $lang['insert_image_left']; ?>" onclick="opener.insert('[img|left]<?php echo htmlsc($uploaded_images_path.$filename); ?>[/img]'); window.close()"><img src="img/img_left.gif" alt="<?php echo $lang['insert_image_left']; ?>" wifth="11" height="11" /></button>&nbsp;
+  <button style="width:25px; height:25px;" title="<?php echo $lang['insert_image_right']; ?>" onclick="opener.insert('[img|right]<?php echo htmlsc($uploaded_images_path.$filename); ?>[/img]'); window.close()"><img src="img/img_right.gif" alt="<?php echo $lang['insert_image_right']; ?>" wifth="11" height="11" /></button></p><?php
   break;
   case 'show_uploaded_images':
    if (isset($_GET['p'])) $p = intval($_GET['p']); else $p = 1;

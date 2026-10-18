@@ -23,9 +23,9 @@
 
 include("inc.php");
 
-if(count($_GET) > 0)
-foreach($_GET as $key => $value)
-$$key = $value;
+foreach ($_GET as $key => $value) {
+ if (forum_request_variable_allowed($key, $value)) $$key = $value;
+}
 
 if (!isset($_SESSION[$settings['session_prefix'].'user_id']) && isset($_COOKIE['auto_login']) && isset($settings['autologin']) && $settings['autologin'] == 1)
  {
@@ -49,7 +49,7 @@ if ($settings['access_for_users_only'] == 1 && isset($_SESSION[$settings['sessio
   {
    $result=mysqli_query($connid, "SELECT id, pid, tid, user_id, UNIX_TIMESTAMP(time + INTERVAL ". $time_difference ." HOUR) AS p_time,
                         UNIX_TIMESTAMP(time) AS time, UNIX_TIMESTAMP(edited + INTERVAL ". $time_difference ." HOUR) AS e_time,
-                        UNIX_TIMESTAMP(edited - INTERVAL ". $settings['edit_delay'] ." MINUTE) AS edited_diff, edited_by, user_id, name, email,
+                        UNIX_TIMESTAMP(edited - INTERVAL ". intval($settings['edit_delay']) ." MINUTE) AS edited_diff, edited_by, user_id, name, email,
                         subject, hp, place, ip, text, show_signature, category, locked, ip FROM ". $db_settings['forum_table'] ." WHERE id = ". intval($id));
    if (!$result) die($lang['db_error']);
    if (mysqli_num_rows($result) == 1)
@@ -121,7 +121,7 @@ echo $header;
 $email_hp = ""; $place = ""; $place_c = "";
 if (empty($entrydata["hide_email"])) $entrydata["hide_email"]=0;
 if ($entrydata["email"]!="" && $entrydata["hide_email"] != 1 or $entrydata["hp"]!="") { $email_hp = " "; }
-if ($entrydata["hp"]!="") { if (substr($entrydata["hp"],0,7) != "http://" && substr($entrydata["hp"],0,8) != "https://" && substr($entrydata["hp"],0,6) != "ftp://" && substr($entrydata["hp"],0,9) != "gopher://" && substr($entrydata["hp"],0,7) != "news://") $entrydata["hp"] = "http://".$entrydata["hp"]; $email_hp .= "<a href=\"" . $entrydata["hp"] ."\" title=\"".htmlsc($entrydata["hp"])."\"><img src=\"img/homepage.gif\" alt=\"".$lang['homepage_alt']."\" width=\"13\" height=\"13\" /></a>"; }
+if ($entrydata["hp"]!="") { $entry_hp = $entrydata["hp"]; if (substr($entry_hp,0,7) != "http://" && substr($entry_hp,0,8) != "https://" && substr($entry_hp,0,6) != "ftp://" && substr($entry_hp,0,9) != "gopher://" && substr($entry_hp,0,7) != "news://") $entry_hp = "http://".$entry_hp; $safe_entry_hp = forum_safe_link_target($entry_hp); if ($safe_entry_hp !== false) $email_hp .= "<a href=\"" . $safe_entry_hp ."\" title=\"".htmlsc($entry_hp)."\"><img src=\"img/homepage.gif\" alt=\"".htmlsc($lang['homepage_alt'])."\" width=\"13\" height=\"13\" /></a>"; }
 if (($entrydata["email"]!="" && $entrydata["hide_email"] != 1) && $entrydata["hp"]!="") { $email_hp .= "&nbsp;"; }
 
 if ($entrydata["email"]!="" && $entrydata["hide_email"] != 1 && isset($page) && isset($order) && isset($category)) { $email_hp .= '<a href="contact.php?id='.$entrydata["id"].'&amp;page='.$page.'&amp;category='.urlencode($category).'&amp;order='.$order.'"><img src="img/email.gif" alt="'.$lang['email_alt'].'" title="'.str_replace("[name]", htmlsc($entrydata["name"]), $lang['email_to_user_linktitle']).'" width="13" height="10" /></a>'; }
@@ -154,9 +154,9 @@ else
    $lang['forum_author_marking'] = str_replace("[email_hp]", $email_hp, $lang['forum_author_marking']);
    $lang['forum_author_marking'] = str_replace("[place, ]", $place_c, $lang['forum_author_marking']);
    $lang['forum_author_marking'] = str_replace("[place]", $place, $lang['forum_author_marking']);
-   $lang['forum_author_marking'] = str_replace("[time]", strftime($lang['time_format'],$entrydata["p_time"]), $lang['forum_author_marking']);
+   $lang['forum_author_marking'] = str_replace("[time]", forum_strftime($lang['time_format'],$entrydata["p_time"]), $lang['forum_author_marking']);
    $lang['forum_edited_marking'] = str_replace("[name]", htmlsc($entrydata["edited_by"]), $lang['forum_edited_marking']);
-   $lang['forum_edited_marking'] = str_replace("[time]", strftime($lang['time_format'],$entrydata["e_time"]), $lang['forum_edited_marking']);
+   $lang['forum_edited_marking'] = str_replace("[time]", forum_strftime($lang['time_format'],$entrydata["e_time"]), $lang['forum_edited_marking']);
    ?><p class="author"><?php
    echo $lang['forum_author_marking'];
    if (isset($_SESSION[$settings['session_prefix'].'user_id']) && $_SESSION[$settings['session_prefix'].'user_type'] == "admin" || isset($_SESSION[$settings['session_prefix'].'user_id']) && $_SESSION[$settings['session_prefix'].'user_type'] == "mod") { ?> &nbsp;<span class="xsmall"><?php echo $entrydata['ip']; ?></span><?php }

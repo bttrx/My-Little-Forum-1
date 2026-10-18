@@ -24,10 +24,10 @@
 include("inc.php");
 
 $cookies_set = false;
-if (isset($_COOKIE['user_name'])) { setcookie("user_name","",0); $cookies_set = true; }
-if (isset($_COOKIE['user_email'])) { setcookie("user_email","",0); $cookies_set = true; }
-if (isset($_COOKIE['user_hp'])) { setcookie("user_hp","",0); $cookies_set = true; }
-if (isset($_COOKIE['user_place'])) { setcookie("user_place","",0); $cookies_set = true; }
+if (isset($_COOKIE['user_name'])) { forum_set_cookie("user_name", "", 0); $cookies_set = true; }
+if (isset($_COOKIE['user_email'])) { forum_set_cookie("user_email", "", 0); $cookies_set = true; }
+if (isset($_COOKIE['user_hp'])) { forum_set_cookie("user_hp", "", 0); $cookies_set = true; }
+if (isset($_COOKIE['user_place'])) { forum_set_cookie("user_place", "", 0); $cookies_set = true; }
 
 $wo = $lang['del_cookie_title'];
 

@@ -27,10 +27,9 @@ include("inc.php");
 if (isset($_SESSION[$settings['session_prefix'].'user_id'])) $user_id = $_SESSION[$settings['session_prefix'].'user_id'];
 #if (isset($_SESSION[$settings['session_prefix'].'user_type'])) $user_type = $_SESSION[$settings['session_prefix'].'user_type'];
 #if (isset($_SESSION[$settings['session_prefix'].'user_name'])) $user_name = $_SESSION[$settings['session_prefix'].'user_name'];
-if (isset($_POST['username'])) $username = $_POST['username'];
-if (isset($_POST['userpw'])) $userpw = $_POST['userpw'];
-if (isset($_GET['username'])) $username = $_GET['username'];
-if (isset($_GET['userpw'])) $userpw = $_GET['userpw'];
+if (isset($_POST['username']) && is_string($_POST['username'])) $username = $_POST['username'];
+if (isset($_POST['userpw']) && is_string($_POST['userpw'])) $userpw = $_POST['userpw'];
+// Credentials are POST-only so passwords are not exposed in URLs or access logs.
 if (isset($_GET['action'])) $action = $_GET['action'];
 if (isset($_POST['action'])) $action = $_POST['action'];
 if (isset($_GET['msg'])) $msg = $_GET['msg'];
@@ -75,8 +74,14 @@ switch ($action)
       {
        $feld = mysqli_fetch_assoc($result);
 
-     if ($feld["user_pw"] == md5($userpw))
+     if (forum_password_verify($userpw, $feld["user_pw"]))
       {
+       if (forum_password_needs_rehash($feld["user_pw"])) {
+        $upgraded_hash = forum_password_hash($userpw);
+        $upgrade_result = mysqli_query($connid, "UPDATE ". $db_settings['userdata_table'] ." SET user_pw='". mysqli_real_escape_string($connid, $upgraded_hash) ."' WHERE user_id=". intval($feld['user_id']) ." LIMIT 1");
+        if (!$upgrade_result) die($lang['db_error']);
+        $feld["user_pw"] = $upgraded_hash;
+       }
        if (trim($feld["activate_code"]) != '')
         {
          header("location: ".basename($_SERVER['PHP_SELF'])."?msg=account_not_activated");
@@ -85,13 +90,14 @@ switch ($action)
 
        if (isset($_POST['autologin_checked']) && isset($settings['autologin']) && $settings['autologin'] == 1)
         {
-         $cookie_pw = md5($feld["user_pw"]);
-         setcookie("auto_login",$feld["user_id"].".".$cookie_pw,time()+(3600*24*30));
+         $cookie_pw = hash('sha256', $feld["user_pw"]);
+         forum_set_cookie("auto_login", $feld["user_id"].".".$cookie_pw, time()+(3600*24*30));
         }
        else
         {
-         setcookie("auto_login","",0);
+         forum_set_cookie("auto_login", "", 0);
         }
+       session_regenerate_id(true);
        $user_id = $feld["user_id"];
        $user_name = $feld["user_name"];
        $user_type = $feld["user_type"];
@@ -128,8 +134,9 @@ switch ($action)
       {
        $feld = mysqli_fetch_assoc($result);
 
-       if (md5($feld["user_pw"]) == $auto_login_array[1] && trim($feld["activate_code"]==''))
+       if (isset($auto_login_array[1]) && hash_equals(hash('sha256', $feld["user_pw"]), (string)$auto_login_array[1]) && trim($feld["activate_code"]) == '')
         {
+         session_regenerate_id(true);
          $user_id = $feld["user_id"];
          $user_name = $feld["user_name"];
          $user_type = $feld["user_type"];
@@ -143,27 +150,27 @@ switch ($action)
          $_SESSION[$settings['session_prefix'].'newtime'] = $newtime;
          $_SESSION[$settings['session_prefix'].'user_time_difference'] = $user_time_difference;
          $update_result = mysqli_query($connid, "UPDATE ". $db_settings['userdata_table'] ." SET logins=logins+1, last_login=NOW(), last_logout=NOW(), registered=registered WHERE user_id=". intval($user_id));
-         setcookie("auto_login",$_COOKIE['auto_login'],time()+(3600*24*30));
+         forum_set_cookie("auto_login", $_COOKIE['auto_login'], time()+(3600*24*30));
          if ($db_settings['useronline_table'] != "")
           {
            @mysqli_query($connid, "DELETE FROM ". $db_settings['useronline_table'] ." WHERE ip = '". mysqli_real_escape_string($connid, $_SERVER['REMOTE_ADDR']) ."'");
           }
         }
-       else setcookie("auto_login","",0);
+       else forum_set_cookie("auto_login", "", 0);
       }
-     else setcookie("auto_login","",0);
+     else forum_set_cookie("auto_login", "", 0);
      }
-     else setcookie("auto_login","",0);
-   if (isset($_GET['referer']) && isset($_GET['id'])) header("location: ".$_GET['referer']."?id=".$_GET['id']);
-   elseif (isset($_GET['referer'])) header("location: ".$_GET['referer']);
-   else header("location: ".basename($_SERVER['PHP_SELF']));
+     else forum_set_cookie("auto_login", "", 0);
+   $safe_referer = forum_safe_return_page(isset($_GET['referer']) ? $_GET['referer'] : 'index.php');
+   if (isset($_GET['id']) && in_array($safe_referer, array('board_entry.php', 'forum_entry.php', 'mix_entry.php', 'user.php'), true)) header("Location: ".$safe_referer."?id=".intval($_GET['id']));
+   else header("Location: ".$safe_referer);
    die("<a href=\"".basename($_SERVER['PHP_SELF'])."\">further...</a>");
   break;
 
   case "logout":
    $update_result = mysqli_query($connid, "UPDATE ". $db_settings['userdata_table'] ." SET last_login=last_login, last_logout=NOW(), registered=registered WHERE user_id=". intval($user_id));
    session_destroy();
-   setcookie("auto_login","",0);
+   forum_set_cookie("auto_login", "", 0);
    if ($db_settings['useronline_table'] != "")
     {
      @mysqli_query($connid, "DELETE FROM ". $db_settings['useronline_table'] ." WHERE ip = 'uid_". intval($user_id) ."'");
@@ -180,7 +187,7 @@ switch ($action)
     mysqli_free_result($pwf_result);
     if($field["user_email"] == $pwf_email)
      {
-      $pwf_code = md5(uniqid(rand()));
+      $pwf_code = bin2hex(random_bytes(16));
       $update_result = mysqli_query($connid, "UPDATE ". $db_settings['userdata_table'] ." SET last_login=last_login, registered=registered, pwf_code='". mysqli_real_escape_string($connid, $pwf_code) ."' WHERE user_id=". intval($field["user_id"]) ." LIMIT 1");
 
       // send mail with activating link:
@@ -217,7 +224,7 @@ switch ($action)
   break;
 
   case "activate":
-  if (isset($_GET['activate']) && trim($_GET['activate']) != "" && isset($_GET['code']) && trim($_GET['code']) != "")
+  if (isset($_GET['activate']) && is_string($_GET['activate']) && trim($_GET['activate']) != "" && isset($_GET['code']) && is_string($_GET['code']) && trim($_GET['code']) != "")
    {
     $pwf_result = mysqli_query($connid, "SELECT user_id, user_name, user_email, pwf_code FROM ". $db_settings['userdata_table'] ." WHERE user_id = ". intval($_GET["activate"]));
     if (!$pwf_result) die($lang['db_error']);
@@ -230,7 +237,7 @@ switch ($action)
       mt_srand ((double)microtime()*1000000);
       $new_user_pw="";
       for($i=0;$i<8;$i++) { $new_user_pw.=substr($letters,mt_rand(0,strlen($letters)-1),1); }
-      $encoded_new_user_pw = md5($new_user_pw);
+      $encoded_new_user_pw = forum_password_hash($new_user_pw);
       $update_result = mysqli_query($connid, "UPDATE ". $db_settings['userdata_table'] ." SET last_login=last_login, registered=registered, user_pw='". mysqli_real_escape_string($connid, $encoded_new_user_pw) ."', pwf_code='' WHERE user_id=". intval($field["user_id"]) ." LIMIT 1");
 
       // send new password:
